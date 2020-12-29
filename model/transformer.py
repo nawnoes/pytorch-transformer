@@ -38,10 +38,12 @@ W^O는 d_v * head 갯수 x 모델 dimension
 논문에서는 헤더의 갯수를 8개 사
 """
 class MultiHeadAttention(nn.Module):
-  def __init__(self, head_num, d_model):
+  def __init__(self, head_num =8 , d_model = 512):
     super(MaskedMultiHeadAttention,self).__init__()
-    self.head_num =head_num
+    self.head_num = head_num
     self.d_model = d_model
+    self.d_k = self.d_v = d_model/head_num
+    # 데이터 분할은 torch.split
 
 
   def forward(self, input ):
