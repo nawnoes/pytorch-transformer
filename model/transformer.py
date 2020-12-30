@@ -1,6 +1,8 @@
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from model.util import clones
 
 """
 self-Attention의 경우 Query Q, Key K, Value V를 입력으로 받아
@@ -14,17 +16,20 @@ class SelfAttention(nn.Module):
     self.softmax = torch.softmax()
 
   def forward(self,query, key, value, mask=None):
-    key_transpose = torch.transpose(key,1,2)
-    x = self.matmul(query,key_transpose)          # MatMul(Q,K)
+    key_transpose = torch.transpose(key,-2,-1)          # (bath, -1, head_num, d_k)
+    matmul_result = self.matmul(query,key_transpose)    # MatMul(Q,K)
     d_k = key.size()[-1]
-    x = x/math.sqrt(d_k)                          # Scale
+    attention_score = matmul_result/math.sqrt(d_k)      # Scale
+
     if mask is not None:
       # 마스크가 있는경우리 뒤에 벡터들은 어텐션 받지 못하도록 마스킹 처리
-      pass
-    x = torch.softmax(x,dim=-1)                   # 어텐션 값
-    x = self.matmul(x,value)
+      # 마스크가 0인 곳에 -1e9로 마스킹 처리
+      attention_score = attention_score.masked_fill(mask ==0, -1e9)
 
-    return x
+    softmax_attention_score = torch.softmax(attention_score,dim=-1)                   # 어텐션 값
+    result = self.matmul(softmax_attention_score,value)
+
+    return result, softmax_attention_score
 
 
 """
@@ -35,20 +40,59 @@ W^Q는 모델의 dimension x d_k
 W^K는 모델의 dimension x d_k
 W^V는 모델의 dimension x d_v
 W^O는 d_v * head 갯수 x 모델 dimension
-논문에서는 헤더의 갯수를 8개 사
+논문에서는 헤더의 갯수를 8개 사용
 """
 class MultiHeadAttention(nn.Module):
-  def __init__(self, head_num =8 , d_model = 512):
+  def __init__(self, head_num =8 , d_model = 512,dropout = 0.1):
     super(MaskedMultiHeadAttention,self).__init__()
+
+    assert d_model % head_num == 0 # d_model % head_num == 0 이 아닌경우 에러메세지 발생
+
     self.head_num = head_num
     self.d_model = d_model
-    self.d_k = self.d_v = d_model/head_num
-    # 데이터 분할은 torch.split
+    self.d_k = self.d_v = d_model // head_num
 
+    self.w_q = nn.Linear(d_model,d_model)
+    self.w_k = nn.Linear(d_model,d_model)
+    self.w_v = nn.Linear(d_model,d_model)
+    self.w_o = nn.Linear(d_model,d_model)
 
-  def forward(self, input ):
+    self.self_attention = SelfAttention()
+    self.dropout = nn.Dropout(p=dropout)
+
+  def forward(self, query, key, value, mask = None):
+    batche_num = query.size(0)
+
+    query = self.w_q(query).view(batche_num, -1, self.head_num, self.d_k).transpose(1, 2)
+    key = self.w_k(key).view(batche_num, -1, self.head_num, self.d_k).transpose(1, 2)
+    value = self.w_v(value).view(batche_num, -1, self.head_num, self.d_k).transpose(1, 2)
+
+    attention_result, attention_score = self.self_attention(query, key, value, mask)
+
+    # 원래의 모양으로 다시 변형해준다.
+    # torch.continuos는 다음행과 열로 이동하기 위한 stride가 변형되어
+    # 메모리 연속적으로 바꿔야 한다!
+    # 참고 문서: https://discuss.pytorch.org/t/contigious-vs-non-contigious-tensor/30107/2
+    attention_result = attention_result.transpose(1,2).contiguous().view(batche_num, -1, self.h * self.d_k)
+
+    return self.w_o(attention_result)
+
+"""
+Position-wise Feed-Forward Networks
+FFN(x) = max(0,xW_1 + b_1)W_2+b2
+입력과 출력은 모두 d_model의 dimension을 가지고
+내부의 레이어는 d_model * 4의 dimension을 가진다.
+"""
 class FeedForward(nn.Module):
-  pass
+  def __init__(self,d_model, dropout = 0.1):
+    super(FeedForward,self).__init__()
+    self.w_1 = nn.Linear(d_model, d_model*4)
+    self.w_2 = nn.Linear(d_model*4, d_model)
+    self.dropout = nn.Dropout(p=dropout)
+
+  def forward(self, x):
+    self.w_2(self.dropout(F.relu(self.w_1(x))))
+
 class MaskedMultiHeadAttention(nn.Module):
   pass
 """
@@ -83,6 +127,27 @@ class Decoder(nn.Module):
 
     return
 
+class Embeddings(nn.Module):
+  def __init__(self, vocab_num, d_model):
+    super(Embeddings,self).__init__()
+    self.emb = nn.Embedding(vocab_num,d_model)
+    self.d_model = d_model
+  def forward(self, x):
+    """
+    1) 임베딩 값에 math.sqrt(self.d_model)을 곱해주는 이유는 무엇인지 찾아볼것
+    2) nn.Embedding에 다시 한번 찾아볼것
+    """
+    return self.emb(x) * math.sqrt(self.d_model)
+"""
+Positional Encoding
+트랜스포머는 RNN이나 CNN을 사용하지 않기 때문에 입력에 순서 값을 반영해줘야 한다.
+예) 나는 어제의 오늘
+"""
+class PositionalEncoding(nn.Module):
+  def __init__(self, max_seq_len, d_model):
+    super(PositionalEncoding,self).__init__()
 
 class Transformer(nn.Module):
-  pass
+  def __init__(self):
+    super(Transformer,self).__init__()
+    self.encoder_bundle
