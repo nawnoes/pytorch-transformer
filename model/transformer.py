@@ -92,6 +92,31 @@ class FeedForward(nn.Module):
 
   def forward(self, x):
     self.w_2(self.dropout(F.relu(self.w_1(x))))
+"""
+Layer Normalization
+: layer의 hidden unit들에 대해서 mean과 variance를 구한다. 
+nn.Parameter는 모듈 파라미터로 여겨지는 텐서
+"""
+class LayerNorm(nn.Module):
+  def __init__(self, features, eps=1e-6):
+    super(LayerNorm,self).__init__()
+    self.a_2 = nn.Parameter(torch.ones(features))
+    self.b_2 = nn.Parameter(torch.zeros(features))
+    self.eps = eps
+  def forward(self, x):
+    mean = x.mean(-1, keepdim =True) # 평균
+    std = x.std(-1, keepdim=True)    # 표준편차
+
+    return self.a_2 * (x-mean)/ (std + self.eps) + self.b_2
+
+class ResidualConnection(nn.Module):
+  def __init__(self, size, dropout):
+    super(ResidualConnection,self).__init__()
+    self.norm = LayerNorm(size)
+    self.dropout = nn.Dropout(dropout)
+
+  def forward(self, x, sublayer):
+    return x + self.dropout((sublayer(self.norm(x))))
 
 class MaskedMultiHeadAttention(nn.Module):
   pass
@@ -99,10 +124,11 @@ class MaskedMultiHeadAttention(nn.Module):
 Encoder 블록은 FeedForward 레이어와 MultiHead 어텐션 레이어를 가진다.
 """
 class Encoder(nn.Module):
-  def __init__(self):
+  def __init__(self, d_model, head_num):
     super(Encoder,self).__init__()
-    self.multi_head_attention = MultiHeadAttention()
-    self.feed_forward = FeedForward()
+    self.multi_head_attention = MultiHeadAttention(d_model= d_model)
+    self.norm = LayerNorm(d_model)
+    self.feed_forward = FeedForward(d_model)
 
   def forward(self, input):
     x = self.multi_head_attention(input)
