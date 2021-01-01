@@ -124,17 +124,18 @@ class MaskedMultiHeadAttention(nn.Module):
 Encoder 블록은 FeedForward 레이어와 MultiHead 어텐션 레이어를 가진다.
 """
 class Encoder(nn.Module):
-  def __init__(self, d_model, head_num):
+  def __init__(self, d_model, head_num,dropout):
     super(Encoder,self).__init__()
     self.multi_head_attention = MultiHeadAttention(d_model= d_model)
-    self.norm = LayerNorm(d_model)
+    self.residual_1 = ResidualConnection(d_model,dropout=dropout)
     self.feed_forward = FeedForward(d_model)
+    self.residual_2 = ResidualConnection(d_model,dropout=dropout)
 
   def forward(self, input):
-    x = self.multi_head_attention(input)
-    x = self.feed_forward(x)
-
+    x = self.residual_1(input, lambda x: self.multi_head_attention(x, x, x))
+    x = self.residual_2(x, self.feed_forward)
     return x
+
 """
 Decoder 블록은 FeedForward 레이어와 MultiHead 어텐션, Masked Multihead 어텐션 레이어를 가다.
 """
