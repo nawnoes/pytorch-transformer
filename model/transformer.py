@@ -1,7 +1,10 @@
 import math
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+import numpy as np
 from model.util import clones
 
 """
@@ -44,7 +47,7 @@ W^O는 d_v * head 갯수 x 모델 dimension
 """
 class MultiHeadAttention(nn.Module):
   def __init__(self, head_num =8 , d_model = 512,dropout = 0.1):
-    super(MaskedMultiHeadAttention,self).__init__()
+    super(MultiHeadAttention,self).__init__()
 
     assert d_model % head_num == 0 # d_model % head_num == 0 이 아닌경우 에러메세지 발생
 
@@ -118,39 +121,45 @@ class ResidualConnection(nn.Module):
   def forward(self, x, sublayer):
     return x + self.dropout((sublayer(self.norm(x))))
 
-class MaskedMultiHeadAttention(nn.Module):
-  pass
 """
 Encoder 블록은 FeedForward 레이어와 MultiHead 어텐션 레이어를 가진다.
 """
 class Encoder(nn.Module):
-  def __init__(self, d_model, head_num,dropout):
+  def __init__(self, d_model, head_num, dropout):
     super(Encoder,self).__init__()
-    self.multi_head_attention = MultiHeadAttention(d_model= d_model)
+    self.multi_head_attention = MultiHeadAttention(d_model= d_model, head_num= head_num)
     self.residual_1 = ResidualConnection(d_model,dropout=dropout)
+
     self.feed_forward = FeedForward(d_model)
     self.residual_2 = ResidualConnection(d_model,dropout=dropout)
 
-  def forward(self, input):
-    x = self.residual_1(input, lambda x: self.multi_head_attention(x, x, x))
+  def forward(self, input, mask):
+    x = self.residual_1(input, lambda x: self.multi_head_attention(x, x, x, mask))
     x = self.residual_2(x, self.feed_forward)
     return x
 
 """
-Decoder 블록은 FeedForward 레이어와 MultiHead 어텐션, Masked Multihead 어텐션 레이어를 가다.
+Decoder 블록은 FeedForward 레이어와 MultiHead 어텐션, Masked Multihead 어텐션 레이어를 가진다.
+MaskedMultiHeadAttention -> MultiHeadAttention(encoder-decoder attention) -> FeedForward
 """
 
 class Decoder(nn.Module):
-  def __init__(self):
+  def __init__(self, d_model,head_num, dropout):
     super(Decoder,self).__init__()
-    self.multi_head_attention = MultiHeadAttention()
-    self.masked_multi_head_attention = MaskedMultiHeadAttention()
-    self.feed_forward=FeedForward
+    self.masked_multi_head_attention = MultiHeadAttention(d_model,head_num)
+    self.residual_1 = ResidualConnection(d_model,dropout=dropout)
 
-  def forward(self, input, encoder_output):
-    x = self.multi_head_attention(input)
-    x = self.masked_multi_head_attention(x,encoder_output)
-    x = self.feed_forward(x)
+    self.encoder_decoder_attention = MultiHeadAttention(d_model,head_num)
+    self.residual_2 = ResidualConnection(d_model,dropout=dropout)
+
+    self.feed_forward=FeedForward
+    self.residual_3 = ResidualConnection(d_model,dropout=dropout)
+
+
+  def forward(self, target, encoder_output, target_mask, encoder_mask):
+    x = self.residual_1(target, lambda x: self.masked_multi_head_attention(x, x, x, target_mask))
+    x = self.residual_2(x, lambda x: self.encoder_decoder_attention(x, encoder_output, encoder_output, encoder_mask))
+    x = self.residual_3(x, self.feed_forward)
 
     return
 
@@ -169,12 +178,68 @@ class Embeddings(nn.Module):
 Positional Encoding
 트랜스포머는 RNN이나 CNN을 사용하지 않기 때문에 입력에 순서 값을 반영해줘야 한다.
 예) 나는 어제의 오늘
+PE (pos,2i) = sin(pos/10000^(2i/d_model))
+PE (pos,2i+1) = cos(pos/10000^(2i/d_model)) 
 """
 class PositionalEncoding(nn.Module):
-  def __init__(self, max_seq_len, d_model):
+  def __init__(self, max_seq_len, d_model,dropout=0.1):
     super(PositionalEncoding,self).__init__()
+    self.dropout = nn.Dropout(p=dropout)
+
+    pe = torch.zeros(max_seq_len, d_model)
+
+    position = torch.arange(0,max_seq_len).unsqueeze(1)
+    base = torch.ones(d_model//2).fill_(10000)
+    pow_term = torch.arange(0, d_model, 2) / torch.tensor(d_model,dtype=torch.float32)
+    div_term = torch.pow(base,pow_term)
+
+    pe[:, 0::2] = torch.sin(position / div_term)
+    pe[:, 1::2] = torch.cos(position / div_term)
+
+    pe = pe.unsqueeze(0)
+
+    # pe를 학습되지 않는 변수로 등록
+    self.register_buffer('positional_encoding', pe)
+
+  def forward(self, x):
+    x = x + Variable(self.positional_encoding[:, :x.size(1)], requires_grad=False)
+    return self.dropout(x)
+
+class Generator(nn.Module):
+  def __init__(self, d_model, vocab_num):
+    super(Generator, self).__init__()
+    self.proj = nn.Linear(d_model, vocab_num)
+
+  def forward(self, x):
+    return F.log_softmax(self.proj(x), dim=-1)
 
 class Transformer(nn.Module):
-  def __init__(self):
+  def __init__(self,vocab_num, d_model, max_seq_len, head_num, dropout, N):
     super(Transformer,self).__init__()
-    self.encoder_bundle
+    self.embedding = Embeddings(vocab_num, d_model)
+    self.positional_encoding = PositionalEncoding(max_seq_len,d_model)
+
+    self.encoders = clones(Encoder(d_model=d_model, head_num=head_num, dropout=dropout), N)
+    self.decoders = clones(Decoder(d_model=d_model, head_num=head_num, dropout=dropout), N)
+
+    self.generator = Generator(d_model, vocab_num)
+
+    # This was important from their code.
+    # Initialize parameters with Glorot / fan_avg.
+    for p in self.parameters():
+      if p.dim() > 1:
+        nn.init.xavier_uniform(p)
+
+  def forward(self, input, target, input_mask, target_mask):
+      x = self.positional_encoding(self.embedding(input))
+      for encoder in self.encoders:
+        x = encoder(x, input_mask)
+
+      target = self.positional_encoding(self.embedding(target))
+      for decoder in self.decoders:
+        target = decoder(target, x, target_mask, input_mask)
+
+      return target
+
+if __name__=="__main__":
+  pass
