@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
 
 
 class NoamOpt:
@@ -111,3 +112,13 @@ class SimpleLossCompute:
       self.opt.step()
       self.opt.optimizer.zero_grad()
     return loss.data[0] * norm
+
+def load_csv(file_path):
+  with open(file_path, 'r') as csv_file:
+    csv_reader = csv.reader(csv_file)
+
+  lines = []
+  for line in csv_reader:
+    lines.append(line)
+
+  return lines

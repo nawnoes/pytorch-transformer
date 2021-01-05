@@ -36,7 +36,9 @@ class TranslationTrainer():
     pass
 
 if __name__=='__main__':
+  dataset =
   criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
+
   model = Transformer(vocab_num=22000,
                       d_model=512,
                       max_seq_len=512,
