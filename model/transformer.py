@@ -15,8 +15,8 @@ MatMul(Q,K) -> Scale -> Masking(opt. Decoder) -> Softmax -> MatMul(result, V)
 class SelfAttention(nn.Module):
   def __init__(self):
     super(SelfAttention,self).__init__()
-    self.matmul = torch.matmul()
-    self.softmax = torch.softmax()
+    self.matmul = torch.matmul
+    self.softmax = torch.softmax
 
   def forward(self,query, key, value, mask=None):
     key_transpose = torch.transpose(key,-2,-1)          # (bath, -1, head_num, d_k)
@@ -49,7 +49,8 @@ class MultiHeadAttention(nn.Module):
   def __init__(self, head_num =8 , d_model = 512,dropout = 0.1):
     super(MultiHeadAttention,self).__init__()
 
-    assert d_model % head_num == 0 # d_model % head_num == 0 이 아닌경우 에러메세지 발생
+    # print(d_model % head_num)
+    # assert d_model % head_num != 0 # d_model % head_num == 0 이 아닌경우 에러메세지 발생
 
     self.head_num = head_num
     self.d_model = d_model
@@ -223,12 +224,6 @@ class Transformer(nn.Module):
     self.decoders = clones(Decoder(d_model=d_model, head_num=head_num, dropout=dropout), N)
 
     self.generator = Generator(d_model, vocab_num)
-
-    # This was important from their code.
-    # Initialize parameters with Glorot / fan_avg.
-    for p in self.parameters():
-      if p.dim() > 1:
-        nn.init.xavier_uniform(p)
 
   def forward(self, input, target, input_mask, target_mask):
       x = self.positional_encoding(self.embedding(input))

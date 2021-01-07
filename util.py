@@ -8,6 +8,7 @@ from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import pandas as pd
 
 
 class NoamOpt:
@@ -105,8 +106,7 @@ class SimpleLossCompute:
 
   def __call__(self, x, y, norm):
     x = self.generator(x)
-    loss = self.criterion(x.contiguous().view(-1, x.size(-1)),
-                          y.contiguous().view(-1)) / norm
+    loss = self.criterion(x.contiguous().view(-1, x.size(-1)), y.contiguous().view(-1)) / norm
     loss.backward()
     if self.opt is not None:
       self.opt.step()
@@ -117,8 +117,13 @@ def load_csv(file_path):
   with open(file_path, 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
 
-  lines = []
-  for line in csv_reader:
-    lines.append(line)
+    lines = []
+    for line in csv_reader:
+      line[0] = line[0].replace(';','')
+      lines.append(line)
 
   return lines
+
+if __name__=="__main__":
+  path = './data/ko-en-translation.csv'
+  lines = load_csv(path)
