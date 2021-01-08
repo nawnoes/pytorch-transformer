@@ -44,7 +44,7 @@ class TranslationTrainer():
 
 if __name__=='__main__':
   vocab_path = './data/wiki-vocab.txt'
-  data_path = './data/ko-en-translation.csv'
+  data_path = './data/test.csv'
   # model setting
   vocab_num = 22000
   max_length = 512

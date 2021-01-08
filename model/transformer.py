@@ -77,7 +77,8 @@ class MultiHeadAttention(nn.Module):
     # torch.continuos는 다음행과 열로 이동하기 위한 stride가 변형되어
     # 메모리 연속적으로 바꿔야 한다!
     # 참고 문서: https://discuss.pytorch.org/t/contigious-vs-non-contigious-tensor/30107/2
-    attention_result = attention_result.transpose(1,2).contiguous().view(batche_num, -1, self.h * self.d_k)
+    attention_result = attention_result.transpose(1,2).contiguous().view(batche_num, -1, self.head_num * self.d_k)
+
 
     return self.w_o(attention_result)
 
@@ -95,7 +96,7 @@ class FeedForward(nn.Module):
     self.dropout = nn.Dropout(p=dropout)
 
   def forward(self, x):
-    self.w_2(self.dropout(F.relu(self.w_1(x))))
+    return self.w_2(self.dropout(F.relu(self.w_1(x))))
 """
 Layer Normalization
 : layer의 hidden unit들에 대해서 mean과 variance를 구한다. 
@@ -136,7 +137,7 @@ class Encoder(nn.Module):
 
   def forward(self, input, mask):
     x = self.residual_1(input, lambda x: self.multi_head_attention(x, x, x, mask))
-    x = self.residual_2(x, self.feed_forward)
+    x = self.residual_2(x, lambda x: self.feed_forward(x))
     return x
 
 """
@@ -158,6 +159,7 @@ class Decoder(nn.Module):
 
 
   def forward(self, target, encoder_output, target_mask, encoder_mask):
+    # target, x, target_mask, input_mask
     x = self.residual_1(target, lambda x: self.masked_multi_head_attention(x, x, x, target_mask))
     x = self.residual_2(x, lambda x: self.encoder_decoder_attention(x, encoder_output, encoder_output, encoder_mask))
     x = self.residual_3(x, self.feed_forward)

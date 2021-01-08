@@ -114,6 +114,7 @@ class SimpleLossCompute:
     return loss.data[0] * norm
 
 def load_csv(file_path):
+  print(f'Load Data | file path: {file_path}')
   with open(file_path, 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
 
@@ -121,6 +122,7 @@ def load_csv(file_path):
     for line in csv_reader:
       line[0] = line[0].replace(';','')
       lines.append(line)
+  print(f'Load Complete | file path: {file_path}')
 
   return lines
 
