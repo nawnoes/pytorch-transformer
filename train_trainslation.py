@@ -22,21 +22,21 @@ class TranslationTrainer():
     tokens = 0
     for i, data in enumerate(dataset):
       input = data[0]
-      target = data[2][:,:-1]
+      target = data[2]
       input_mask = data[1]
       target_mask = data[3]
       token_num = data[4]
 
       out = model.forward(input, target, input_mask, target_mask)
 
-      loss = loss_compute(out, target[...,1:],token_num)
+      loss = loss_compute(out, target, token_num)
       total_loss += loss
-      total_tokens += data['token_num']
-      tokens +=data['token_num']
+      total_tokens += token_num
+      tokens += token_num
       if i % 50 == 1:
         elapsed = time.time() - start
         print("Epoch Step: %d Loss: %f Tokens per Sec: %f" %
-              (i, loss / data['token_num'], tokens / elapsed))
+              (i, loss / token_num, tokens / elapsed))
         start = time.time()
         tokens = 0
     return total_loss / total_tokens
@@ -62,7 +62,7 @@ if __name__=='__main__':
   dataset = TranslationDataset(tokenizer=tokenizer,file_path=data_path,max_length = max_length)
   train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-  criterion = LabelSmoothing(size=batch_size, padding_idx=tokenizer.pad_token_id, smoothing=0.0)
+  criterion = LabelSmoothing(size=vocab_num, padding_idx=tokenizer.pad_token_id, smoothing=0.)
 
   model = Transformer(vocab_num=vocab_num,
                       d_model=d_model,

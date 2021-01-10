@@ -106,12 +106,13 @@ class SimpleLossCompute:
 
   def __call__(self, x, y, norm):
     x = self.generator(x)
-    loss = self.criterion(x.contiguous().view(-1, x.size(-1)), y.contiguous().view(-1)) / norm
+    loss = self.criterion(x[:,1:].contiguous().view(-1, x.size(-1)), y[:,:-1].contiguous().view(-1)) / norm.sum()
+
     loss.backward()
     if self.opt is not None:
       self.opt.step()
       self.opt.optimizer.zero_grad()
-    return loss.data[0] * norm
+    return loss.data * norm.sum()
 
 def load_csv(file_path):
   print(f'Load Data | file path: {file_path}')

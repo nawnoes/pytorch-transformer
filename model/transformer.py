@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+from torch.nn import CrossEntropyLoss
+
 import matplotlib.pyplot as plt
 import numpy as np
 from model.util import clones
@@ -19,15 +21,18 @@ class SelfAttention(nn.Module):
     self.softmax = torch.softmax
 
   def forward(self,query, key, value, mask=None):
-    key_transpose = torch.transpose(key,-2,-1)          # (bath, -1, head_num, d_k)
+    key_transpose = torch.transpose(key,-2,-1)          # (bath, head_num, d_k, token_)
     matmul_result = self.matmul(query,key_transpose)    # MatMul(Q,K)
     d_k = key.size()[-1]
     attention_score = matmul_result/math.sqrt(d_k)      # Scale
 
     if mask is not None:
-      # 마스크가 있는경우리 뒤에 벡터들은 어텐션 받지 못하도록 마스킹 처리
+      # 마스크가 있는경우 뒤에 벡터들은 어텐션 받지 못하도록 마스킹 처리
       # 마스크가 0인 곳에 -1e9로 마스킹 처리
-      attention_score = attention_score.masked_fill(mask ==0, -1e9)
+      try:
+        attention_score = attention_score.masked_fill(mask == 0, -1e9)
+      except:
+        print('error')
 
     softmax_attention_score = torch.softmax(attention_score,dim=-1)                   # 어텐션 값
     result = self.matmul(softmax_attention_score,value)
@@ -65,6 +70,10 @@ class MultiHeadAttention(nn.Module):
     self.dropout = nn.Dropout(p=dropout)
 
   def forward(self, query, key, value, mask = None):
+    if mask is not None:
+      # Same mask applied to all h heads.
+      mask = mask.unsqueeze(1)
+
     batche_num = query.size(0)
 
     query = self.w_q(query).view(batche_num, -1, self.head_num, self.d_k).transpose(1, 2)
@@ -148,13 +157,13 @@ MaskedMultiHeadAttention -> MultiHeadAttention(encoder-decoder attention) -> Fee
 class Decoder(nn.Module):
   def __init__(self, d_model,head_num, dropout):
     super(Decoder,self).__init__()
-    self.masked_multi_head_attention = MultiHeadAttention(d_model,head_num)
+    self.masked_multi_head_attention = MultiHeadAttention(d_model= d_model, head_num= head_num)
     self.residual_1 = ResidualConnection(d_model,dropout=dropout)
 
-    self.encoder_decoder_attention = MultiHeadAttention(d_model,head_num)
+    self.encoder_decoder_attention = MultiHeadAttention(d_model= d_model, head_num= head_num)
     self.residual_2 = ResidualConnection(d_model,dropout=dropout)
 
-    self.feed_forward=FeedForward
+    self.feed_forward= FeedForward(d_model)
     self.residual_3 = ResidualConnection(d_model,dropout=dropout)
 
 
@@ -164,7 +173,7 @@ class Decoder(nn.Module):
     x = self.residual_2(x, lambda x: self.encoder_decoder_attention(x, encoder_output, encoder_output, encoder_mask))
     x = self.residual_3(x, self.feed_forward)
 
-    return
+    return x
 
 class Embeddings(nn.Module):
   def __init__(self, vocab_num, d_model):
@@ -227,7 +236,7 @@ class Transformer(nn.Module):
 
     self.generator = Generator(d_model, vocab_num)
 
-  def forward(self, input, target, input_mask, target_mask):
+  def forward(self, input, target, input_mask, target_mask, labels=None):
       x = self.positional_encoding(self.embedding(input))
       for encoder in self.encoders:
         x = encoder(x, input_mask)
@@ -236,7 +245,18 @@ class Transformer(nn.Module):
       for decoder in self.decoders:
         target = decoder(target, x, target_mask, input_mask)
 
-      return target
+      lm_logits = self.generator(target)
+      loss = None
+      if labels is not None:
+        # Shift so that tokens < n predict n
+        shift_logits = lm_logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        # Flatten the tokens
+        loss_fct = CrossEntropyLoss()
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+
+      return lm_logits, loss
+
 
 if __name__=="__main__":
   pass
