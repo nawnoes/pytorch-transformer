@@ -8,3 +8,11 @@
 
 
 
+## 버그
+### 1. encoder 마스킹 에러
+mask에 unsqueeze(1)을 통해 하나의 차원을 추가해줘야한다. 
+```py
+  mask = mask.unsqueeze(1)
+  attention_score = attention_score.masked_fill(mask == 0, -1e9)
+```
+
