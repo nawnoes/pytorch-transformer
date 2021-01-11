@@ -2,7 +2,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import torch
-import torch.nn as nn
 from model.transformer import Transformer
 from transformers import BertTokenizer
 from dataset import TranslationDataset
@@ -79,10 +78,16 @@ class TranslationTrainer():
           if i % log_interval == 0 and i > 0:
               cur_loss = total_loss / log_interval
               elapsed = time.time() - start_time
-              print('| epoch {:3d} | {:5d}/{:5d} batches | '
+              # print('| epoch {:3d} | {:5d}/{:5d} batches | '
+              #       'lr {:02.2f} | ms/batch {:5.2f} | '
+              #       'loss {:5.2f} | ppl {:8.2f}'.format(
+              #         epoch, i, len(train_dataset), scheduler.get_lr()[0],
+              #         elapsed * 1000 / log_interval,
+              #         cur_loss, math.exp(cur_loss)))
+              pb.set_postfix_str('| epoch {:3d} | {:5d}/{:5d} batches | '
                     'lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                      epoch, i, len(dataset), scheduler.get_lr()[0],
+                      epoch, i, len(train_dataset), scheduler.get_lr()[0],
                       elapsed * 1000 / log_interval,
                       cur_loss, math.exp(cur_loss)))
               total_loss = 0
@@ -127,7 +132,7 @@ class TranslationTrainer():
 
 if __name__=='__main__':
   vocab_path = './data/wiki-vocab.txt'
-  data_path = './data/test.csv'
+  data_path = './data/ko-en-translation.csv'
   checkpoint_path = './checkpoints'
 
   # model setting
@@ -158,7 +163,6 @@ if __name__=='__main__':
                       dropout=dropout,
                       N=N)
 
-  criterion = nn.CrossEntropyLoss()
   optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
