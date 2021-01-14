@@ -256,7 +256,20 @@ class Transformer(nn.Module):
         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
       return lm_logits, loss
+  def encode(self,input, input_mask):
+    x = self.positional_encoding(self.embedding(input))
+    for encoder in self.encoders:
+      x = encoder(x, input_mask)
+    return x
 
+  def decode(self, encode_output, encoder_mask, target, target_mask):
+    target = self.positional_encoding(self.embedding(target))
+    for decoder in self.decoders:
+      target = decoder(target, encode_output, target_mask, encoder_mask)
+
+    lm_logits = self.generator(target)
+
+    return lm_logits
 
 if __name__=="__main__":
   pass
