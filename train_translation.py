@@ -141,9 +141,11 @@ class TranslationTrainer():
 
 
 if __name__ == '__main__':
-  vocab_path = '/content/drive/My Drive/Colab Notebooks/transformer/data/wiki-vocab.txt'
-  data_path = '/content/drive/My Drive/Colab Notebooks/transformer/data/ko-en-translation.csv'
-  checkpoint_path = '/content/drive/My Drive/Colab Notebooks/transformer/checkpoints'
+  #dir_path = '/content/drive/My Drive/Colab Notebooks/transformer'
+  dir_path = '.'
+  vocab_path = f'{dir_path}/data/wiki-vocab.txt'
+  data_path = f'{dir_path}/data/ko-en-translation.csv'
+  checkpoint_path = f'{dir_path}/checkpoints'
 
   # model setting
   model_name = 'transformer-translation'
@@ -155,7 +157,7 @@ if __name__ == '__main__':
   N = 3
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-  tokenizer = BertTokenizer(vocab_path)
+  tokenizer = BertTokenizer(vocab_file=vocab_path, do_lower_case=False)
 
   # hyper parameter
   epochs = 5

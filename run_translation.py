@@ -22,7 +22,7 @@ if __name__=="__main__":
   d_model = 512
   head_num = 8
   dropout = 0.1
-  N = 3
+  N = 6
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
   tokenizer = BertTokenizer(vocab_path)
@@ -32,13 +32,14 @@ if __name__=="__main__":
                       head_num=head_num,
                       dropout=dropout,
                       N=N)
-  if os.path.isfile(f'{checkpoint_path}/{model_name}.pth'):
-    checkpoint = torch.load(f'{checkpoint_path}/{model_name}.pth', map_location=device)
+  if os.path.isfile(f'{checkpoint_path}/{model_name}-n6.pth'):
+    checkpoint = torch.load(f'{checkpoint_path}/{model_name}-n6.pth', map_location=device)
     start_epoch = checkpoint['epoch']
     losses = checkpoint['losses']
     global_steps = checkpoint['train_step']
 
     model.load_state_dict(checkpoint['model_state_dict'])
+    print(f'{checkpoint_path}/{model_name}-n6.pth loaded')
 
   while True:
     # input_str = '나는 학생이다.'#
