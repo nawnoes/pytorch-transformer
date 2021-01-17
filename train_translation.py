@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 import sys
 
@@ -11,7 +12,7 @@ from dataset import TranslationDataset
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 import math
-
+import os
 import time
 
 
@@ -54,17 +55,33 @@ class TranslationTrainer():
     losses = {}
     best_val_loss = float("inf")
     best_model = None
+    start_epoch = 0
+    start_step = 0
+    train_dataset_length = len(train_dataset)
 
     self.model.to(self.device)
-    for epoch in range(epochs):
+    if os.path.isfile(f'{self.checkpoint_path}/{self.model_name}.pth'):
+      checkpoint = torch.load(f'{self.checkpoint_path}/{self.model_name}.pth', map_location=self.device)
+      start_epoch = checkpoint['epoch']
+      losses = checkpoint['losses']
+      global_steps = checkpoint['train_step']
+      start_step = global_steps if start_epoch == 0 else (global_steps % train_dataset_length) + 1
+
+      self.model.load_state_dict(checkpoint['model_state_dict'])
+      optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+    for epoch in range(start_epoch, epochs):
       epoch_start_time = time.time()
 
       pb = tqdm(enumerate(train_dataset),
                 desc=f'Epoch-{epoch} Iterator',
-                total=len(train_dataset),
+                total=train_dataset_length,
                 bar_format='{l_bar}{bar:10}{r_bar}'
                 )
-      for i, data in pb:
+      pb.update(start_step)
+      for i,data in pb:
+        if i < start_step:
+          continue
         input = data[0].to(self.device)
         target = data[2].to(self.device)
         input_mask = data[1].to(self.device)
@@ -80,6 +97,8 @@ class TranslationTrainer():
         losses[global_steps] = loss.item()
         total_loss += loss.item()
         log_interval = 1
+        save_interval = 500
+
         global_steps += 1
 
         if i % log_interval == 0 and i > 0:
@@ -99,7 +118,9 @@ class TranslationTrainer():
             cur_loss, math.exp(cur_loss)))
           total_loss = 0
           start_time = time.time()
-          self.save(epoch, self.model, optimizer, losses, global_steps)
+          # self.save(epoch, self.model, optimizer, losses, global_steps)
+          if i % save_interval == 0:
+            self.save(epoch, self.model, optimizer, losses, global_steps)
       val_loss = self.evaluate(eval_dataset)
       self.model.train()
       print('-' * 89)
@@ -110,7 +131,7 @@ class TranslationTrainer():
       if val_loss < best_val_loss:
         best_val_loss = val_loss
         best_model = model
-
+      start_step = 0
       scheduler.step()
 
   def evaluate(self, dataset):
@@ -141,27 +162,28 @@ class TranslationTrainer():
 
 
 if __name__ == '__main__':
-  #dir_path = '/content/drive/My Drive/Colab Notebooks/transformer'
+  torch.manual_seed(10)
+  # dir_path = '/content/drive/My Drive/Colab Notebooks/transformer'
   dir_path = '.'
   vocab_path = f'{dir_path}/data/wiki-vocab.txt'
-  data_path = f'{dir_path}/data/ko-en-translation.csv'
+  data_path = f'{dir_path}/data/test.csv'
   checkpoint_path = f'{dir_path}/checkpoints'
 
   # model setting
-  model_name = 'transformer-translation'
+  model_name = 'transformer-translation-n6'
   vocab_num = 22000
   max_length = 512
   d_model = 512
   head_num = 8
   dropout = 0.1
-  N = 3
+  N = 6
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
   tokenizer = BertTokenizer(vocab_file=vocab_path, do_lower_case=False)
 
   # hyper parameter
-  epochs = 5
-  batch_size = 16
+  epochs = 100
+  batch_size = 4
   padding_idx = tokenizer.pad_token_id
   learning_rate = 0.5
 
@@ -179,7 +201,7 @@ if __name__ == '__main__':
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
   trainer = TranslationTrainer(dataset, tokenizer, model, max_length, device, model_name, checkpoint_path, batch_size)
-  train_dataloader, eval_dataloader = trainer.build_dataloaders(train_test_split=0.1)
+  train_dataloader, eval_dataloader = trainer.build_dataloaders(train_test_split=0.2)
 
   trainer.train(epochs, train_dataloader, eval_dataloader, optimizer, scheduler)
 

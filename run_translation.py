@@ -25,7 +25,7 @@ if __name__=="__main__":
   N = 6
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-  tokenizer = BertTokenizer(vocab_path)
+  tokenizer = BertTokenizer(vocab_file=vocab_path, do_lower_case=False)
   model = Transformer(vocab_num=vocab_num,
                       d_model=d_model,
                       max_seq_len=max_length,
@@ -56,7 +56,7 @@ if __name__=="__main__":
       lm_logits = model.decode(encoder_output,encoder_mask,target, Variable(subsequent_mask(target.size(1)).type_as(encoder_input.data)))
       prob = lm_logits[:, -1]
       _, next_word = torch.max(prob, dim=1)
-      if next_word.data[0] == tokenizer.pad_token_id:
+      if next_word.data[0] == tokenizer.pad_token_id or next_word.data[0] == tokenizer.sep_token_id:
         print(f'ko: {input_str} en: {tokenizer.decode(target.squeeze().tolist(),skip_special_tokens=True)}')
         break
       target = torch.cat((target[0], next_word))

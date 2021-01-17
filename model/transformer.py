@@ -252,7 +252,7 @@ class Transformer(nn.Module):
         shift_logits = lm_logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
         # Flatten the tokens
-        loss_fct = CrossEntropyLoss()
+        loss_fct = CrossEntropyLoss(ignore_index=0)
         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
       return lm_logits, loss
