@@ -4,9 +4,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-
-import matplotlib.pyplot as plt
-import numpy as np
 from model.util import clones
 
 """
@@ -29,10 +26,10 @@ class SelfAttention(nn.Module):
     if mask is not None:
       # 마스크가 있는경우 뒤에 벡터들은 어텐션 받지 못하도록 마스킹 처리
       # 마스크가 0인 곳에 -1e9로 마스킹 처리
-      try:
-        attention_score = attention_score.masked_fill(mask == 0, -1e9)
-      except:
-        print('error')
+      # try:
+      attention_score = attention_score.masked_fill(mask == 0, -1e20)
+      # except:
+      #   print('error')
 
     softmax_attention_score = torch.softmax(attention_score,dim=-1)                   # 어텐션 값
     result = self.matmul(softmax_attention_score,value)
@@ -243,6 +240,7 @@ class Transformer(nn.Module):
 
       target = self.positional_encoding(self.embedding(target))
       for decoder in self.decoders:
+        # target, encoder_output, target_mask, encoder_mask)
         target = decoder(target, x, target_mask, input_mask)
 
       lm_logits = self.generator(target)
@@ -265,6 +263,7 @@ class Transformer(nn.Module):
   def decode(self, encode_output, encoder_mask, target, target_mask):
     target = self.positional_encoding(self.embedding(target))
     for decoder in self.decoders:
+      #target, encoder_output, target_mask, encoder_mask
       target = decoder(target, encode_output, target_mask, encoder_mask)
 
     lm_logits = self.generator(target)

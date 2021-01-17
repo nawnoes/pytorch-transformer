@@ -36,14 +36,33 @@ class TranslationTrainer():
     self.device = device
     self.ntoken = tokenizer.vocab_size
     self.batch_size = batch_size
+  def my_collate_fn(self, samples):
+    input_str =[]
+    target_str =[]
+    input_str.append([sample['input_str'] for sample in samples])
+    input = [sample['input'] for sample in samples]
+    input_mask = [sample['input_mask'] for sample in samples]
+    target = [sample['target'] for sample in samples]
+    target_mask = [sample['target_mask'] for sample in samples]
+    token_num = [sample['token_num'] for sample in samples]
+    target_str.append([sample['target_str'] for sample in samples])
 
+    return {
+        "input_str":input_str,
+        "input":torch.stack(input).contiguous(),                                              # input
+        "input_mask": torch.stack(input_mask).contiguous(),       # input_mask
+        "target": torch.stack(target).contiguous(),                                           # target,
+        "target_mask": torch.stack(target_mask).contiguous(),   # target_mask
+        "token_num": torch.stack(token_num).contiguous(),   # token_num
+        "target_str": target_str
+    }
   def build_dataloaders(self, train_test_split=0.1, train_shuffle=True, eval_shuffle=True):
     dataset_len = len(self.dataset)
     eval_len = int(dataset_len * train_test_split)
     train_len = dataset_len - eval_len
     train_dataset, eval_dataset = random_split(self.dataset, (train_len, eval_len))
-    train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=train_shuffle, )
-    eval_loader = DataLoader(eval_dataset, batch_size=self.batch_size, shuffle=eval_shuffle)
+    train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=train_shuffle, collate_fn=self.my_collate_fn)
+    eval_loader = DataLoader(eval_dataset, batch_size=self.batch_size, shuffle=eval_shuffle , collate_fn=self.my_collate_fn)
 
     return train_loader, eval_loader
 
@@ -82,10 +101,19 @@ class TranslationTrainer():
       for i,data in pb:
         if i < start_step:
           continue
-        input = data[0].to(self.device)
-        target = data[2].to(self.device)
-        input_mask = data[1].to(self.device)
-        target_mask = data[3].to(self.device)
+        """
+        doc={
+        "input":input,                                              # input
+        "input_mask": (input != pad_token_idx).unsqueeze(-2),       # input_mask
+        "target": target,                                           # target,
+        "target_mask": self.make_std_mask(target, pad_token_idx),   # target_mask
+        "token_num": (target[...,1:] != pad_token_idx).data.sum()   # token_num
+      }
+        """
+        input = data['input'].to(self.device)
+        target = data['target'].to(self.device)
+        input_mask = data['input_mask'].to(self.device)
+        target_mask = data['target_mask'].to(self.device)
 
         optimizer.zero_grad()
         generator_logit, loss = self.model.forward(input, target, input_mask, target_mask, labels=target)
@@ -141,10 +169,10 @@ class TranslationTrainer():
     self.model.to(self.device)
     with torch.no_grad():
       for i, data in enumerate(dataset):
-        input = data[0].to(self.device)
-        target = data[2].to(self.device)
-        input_mask = data[1].to(self.device)
-        target_mask = data[3].to(self.device)
+        input = data['input'].to(self.device)
+        target = data['target'].to(self.device)
+        input_mask = data['input_mask'].to(self.device)
+        target_mask = data['target_mask'].to(self.device)
 
         generator_logit, loss = self.model.forward(input, target, input_mask, target_mask, labels=target)
         total_loss += loss.item()
@@ -166,11 +194,12 @@ if __name__ == '__main__':
   # dir_path = '/content/drive/My Drive/Colab Notebooks/transformer'
   dir_path = '.'
   vocab_path = f'{dir_path}/data/wiki-vocab.txt'
+  # data_path = f'{dir_path}/data/ko-en-spoken.csv'
   data_path = f'{dir_path}/data/test.csv'
   checkpoint_path = f'{dir_path}/checkpoints'
 
   # model setting
-  model_name = 'transformer-translation-n6'
+  model_name = 'transformer-translation-spoken'
   vocab_num = 22000
   max_length = 512
   d_model = 512
@@ -188,7 +217,6 @@ if __name__ == '__main__':
   learning_rate = 0.5
 
   dataset = TranslationDataset(tokenizer=tokenizer, file_path=data_path, max_length=max_length)
-  train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
   model = Transformer(vocab_num=vocab_num,
                       d_model=d_model,

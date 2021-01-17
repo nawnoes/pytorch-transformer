@@ -16,7 +16,8 @@ if __name__=="__main__":
   checkpoint_path = f'{project_dir}/checkpoints'
 
   # model setting
-  model_name = 'transformer-translation'
+  # model_name = 'transformer-translation-spoken'
+  model_name = 'transformer-translation-spoken-ignore-pad'
   vocab_num = 22000
   max_length = 512
   d_model = 512
@@ -32,18 +33,18 @@ if __name__=="__main__":
                       head_num=head_num,
                       dropout=dropout,
                       N=N)
-  if os.path.isfile(f'{checkpoint_path}/{model_name}-n6.pth'):
-    checkpoint = torch.load(f'{checkpoint_path}/{model_name}-n6.pth', map_location=device)
+  if os.path.isfile(f'{checkpoint_path}/{model_name}.pth'):
+    checkpoint = torch.load(f'{checkpoint_path}/{model_name}.pth', map_location=device)
     start_epoch = checkpoint['epoch']
     losses = checkpoint['losses']
     global_steps = checkpoint['train_step']
 
     model.load_state_dict(checkpoint['model_state_dict'])
-    print(f'{checkpoint_path}/{model_name}-n6.pth loaded')
+    print(f'{checkpoint_path}/{model_name}-.pth loaded')
 
   while True:
-    # input_str = '나는 학생이다.'#
-    input_str = input('입력: ')
+    input_str = '나는 학생이다.'#
+    # input_str = input('입력: ')
     str = tokenizer.encode(input_str)
     pad_len = (max_length - len(str))
     str_len = len(str)
@@ -56,6 +57,8 @@ if __name__=="__main__":
       lm_logits = model.decode(encoder_output,encoder_mask,target, Variable(subsequent_mask(target.size(1)).type_as(encoder_input.data)))
       prob = lm_logits[:, -1]
       _, next_word = torch.max(prob, dim=1)
+      print(f'ko: {input_str} en: {tokenizer.decode(target.squeeze().tolist(), skip_special_tokens=True)}')
+
       if next_word.data[0] == tokenizer.pad_token_id or next_word.data[0] == tokenizer.sep_token_id:
         print(f'ko: {input_str} en: {tokenizer.decode(target.squeeze().tolist(),skip_special_tokens=True)}')
         break

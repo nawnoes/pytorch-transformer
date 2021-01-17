@@ -19,19 +19,21 @@ class TranslationDataset(Dataset):
 
       target = tokenizer.encode(line[1], max_length=max_length, truncation=True)
       rest = max_length - len(target)
-      target = torch.tensor(target + [pad_token_idx] * rest)
+      target = torch.tensor(target+ [pad_token_idx] * rest)
 
-      doc=[
-        input,                                        # input
-        (input != pad_token_idx).unsqueeze(-2),       # input_mask
-        target,                                       # target,
-        self.make_std_mask(target, pad_token_idx),    # target_mask
-        (target[...,1:] != pad_token_idx).data.sum()  # token_num
-      ]
+      doc={
+        'input_str': tokenizer.convert_ids_to_tokens(input),
+        'input':input,                                        # input
+        'input_mask': (input != pad_token_idx).unsqueeze(-2),       # input_mask
+        'target_str': tokenizer.convert_ids_to_tokens(target),
+        'target': target,                                       # target,
+        'target_mask': self.make_std_mask(target, pad_token_idx),    # target_mask
+        'token_num': (target[...,1:] != pad_token_idx).data.sum()  # token_num
+      }
       self.docs.append(doc)
   @staticmethod
   def make_std_mask(tgt, pad_token_idx):
-    "Create a mask to hide padding and future words."
+    'Create a mask to hide padding and future words.'
     target_mask = (tgt != pad_token_idx).unsqueeze(-2)
     target_mask = target_mask & Variable(subsequent_mask(tgt.size(-1)).type_as(target_mask.data))
     return target_mask.squeeze()
@@ -39,4 +41,5 @@ class TranslationDataset(Dataset):
   def __len__(self):
     return len(self.docs)
   def __getitem__(self, idx):
-    return self.docs[idx][0], self.docs[idx][1], self.docs[idx][2], self.docs[idx][3], self.docs[idx][4]
+    item = self.docs[idx]
+    return item
