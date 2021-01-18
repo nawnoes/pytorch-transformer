@@ -17,9 +17,9 @@ if __name__=="__main__":
 
   # model setting
   # model_name = 'transformer-translation-spoken'
-  model_name = 'transformer-translation-spoken-ignore-pad'
+  model_name = 'transformer-translation-spoken'
   vocab_num = 22000
-  max_length = 512
+  max_length = 64
   d_model = 512
   head_num = 8
   dropout = 0.1
@@ -41,10 +41,10 @@ if __name__=="__main__":
 
     model.load_state_dict(checkpoint['model_state_dict'])
     print(f'{checkpoint_path}/{model_name}-.pth loaded')
-
+    model.eval()
   while True:
-    input_str = '나는 학생이다.'#
-    # input_str = input('입력: ')
+    # input_str = 'c는 결혼은 자신의 삶을 경제적으로 안정되게 할 수단이라고 생각해요.'#
+    input_str = input('입력: ')
     str = tokenizer.encode(input_str)
     pad_len = (max_length - len(str))
     str_len = len(str)

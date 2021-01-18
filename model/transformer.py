@@ -214,14 +214,23 @@ class PositionalEncoding(nn.Module):
     x = x + Variable(self.positional_encoding[:, :x.size(1)], requires_grad=False)
     return self.dropout(x)
 
+# class Generator(nn.Module):
+#   def __init__(self, d_model, vocab_num):
+#     super(Generator, self).__init__()
+#     self.proj = nn.Linear(d_model, vocab_num)
+#
+#   def forward(self, x):
+#     return F.log_softmax(self.proj(x), dim=-1)
 class Generator(nn.Module):
   def __init__(self, d_model, vocab_num):
     super(Generator, self).__init__()
-    self.proj = nn.Linear(d_model, vocab_num)
+    self.proj_1 = nn.Linear(d_model, d_model*4)
+    self.proj_2 = nn.Linear(d_model*4, vocab_num)
 
   def forward(self, x):
-    return F.log_softmax(self.proj(x), dim=-1)
-
+    x = self.proj_1(x)
+    x = self.proj_2(x)
+    return x
 class Transformer(nn.Module):
   def __init__(self,vocab_num, d_model, max_seq_len, head_num, dropout, N):
     super(Transformer,self).__init__()
