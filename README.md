@@ -1,24 +1,45 @@
-# transformer
+# Transformer
 [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention)와 [pytorch 공식문서](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html)를 
 참고하여 트랜스포머를 직접 개발해보고 한글-영어 번역 태스크에 대해 학습 및 테스트.
-![]('./images/transformer-translation.png')
+![](./images/transformer-translation.png)
 ## Data
 ### ① AI Hub 한국어-영어 번역 샘플 데이터.
-샘플 데이터의 경우 회원 가입 및 로그인 할 필요 없음.
+> 샘플 데이터의 경우 회원 가입 및 로그인 할 필요 없음.
 - url: https://aihub.or.kr/sample_data_board
 ### ② AI Hub 한국어-영어 번역 데이터 - 구어체
-사용허가를 받아 
+사용허가를 받아 다운로드 후 구어체 데이터데 대하여 학 
 ## Model
 
-## Train
 ```text
 model
-  transformer.py    ﹒﹒﹒ 트랜스포머 모델
-  util.py           ﹒﹒﹒ 모델에 사용되는 유틸
-  visualization.py  ﹒﹒﹒ 모델의 시각화에 사용하는 
+ ㄴ transformer.py    ﹒﹒﹒ 트랜스포머 모델
+ ㄴ util.py           ﹒﹒﹒ 모델에 사용되는 유틸
+ ㄴ visualization.py  ﹒﹒﹒ 모델의 시각화에 사용하는 습
+train_translation.py﹒﹒﹒ 한국어-영어 번역 학습
+run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스
+```
+
+### Train Setting
+```python
+# Model setting
+model_name = 'transformer-translation-spoken'
+vocab_num = 22000
+max_length = 64
+d_model = 512
+head_num = 8
+dropout = 0.1
+N = 6
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+# Hyperparameter
+epochs = 50
+batch_size = 8
+learning_rate = 0.8
 ```
 
 ### Train Result
+- Epoch: 50
+
 ```
 -----------------------------------------------------------------------------------------
 | end of epoch   0 | time: 2005.31s | valid loss  4.95 | valid ppl   141.70
@@ -29,25 +50,12 @@ model
 -----------------------------------------------------------------------------------------
 | end of epoch   3 | time: 1966.75s | valid loss  4.25 | valid ppl    70.38
 -----------------------------------------------------------------------------------------
-| end of epoch   4 | time: 1964.57s | valid loss  4.17 | valid ppl    64.82
+                                ...중략...
+| end of epoch  47 | time: 1973.69s | valid loss  2.79 | valid ppl    16.26
 -----------------------------------------------------------------------------------------
-| end of epoch   5 | time: 1933.66s | valid loss  4.02 | valid ppl    55.44
+| end of epoch  48 | time: 2076.40s | valid loss  2.77 | valid ppl    16.00
 -----------------------------------------------------------------------------------------
-| end of epoch   6 | time: 1979.88s | valid loss  3.93 | valid ppl    51.11
------------------------------------------------------------------------------------------
-| end of epoch   7 | time: 1996.13s | valid loss  3.86 | valid ppl    47.37
------------------------------------------------------------------------------------------
-| end of epoch   8 | time: 1957.73s | valid loss  3.79 | valid ppl    44.17
------------------------------------------------------------------------------------------
-| end of epoch   9 | time: 1967.79s | valid loss  3.69 | valid ppl    40.17
------------------------------------------------------------------------------------------
-| end of epoch  10 | time: 1993.58s | valid loss  3.62 | valid ppl    37.41
------------------------------------------------------------------------------------------
-| end of epoch  11 | time: 1980.43s | valid loss  3.57 | valid ppl    35.45
------------------------------------------------------------------------------------------
-| end of epoch  12 | time: 1992.14s | valid loss  3.50 | valid ppl    33.11
------------------------------------------------------------------------------------------
-| end of epoch  13 | time: 1976.84s | valid loss  3.46 | valid ppl    31.92
+| end of epoch  49 | time: 2080.24s | valid loss  2.79 | valid ppl    16.26
 -----------------------------------------------------------------------------------------
 ```
 

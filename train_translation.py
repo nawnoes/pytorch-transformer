@@ -211,7 +211,7 @@ if __name__ == '__main__':
   tokenizer = BertTokenizer(vocab_file=vocab_path, do_lower_case=False)
 
   # hyper parameter
-  epochs = 100
+  epochs = 50
   batch_size = 4
   padding_idx = tokenizer.pad_token_id
   learning_rate = 0.5
