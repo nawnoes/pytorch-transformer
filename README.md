@@ -10,7 +10,7 @@
 model
  ㄴ transformer.py    ﹒﹒﹒ 트랜스포머 모델
  ㄴ util.py           ﹒﹒﹒ 모델에 사용되는 유틸
- ㄴ visualization.py  ﹒﹒﹒ 모델의 시각화에 사용하는 습
+ ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
 train_translation.py﹒﹒﹒ 한국어-영어 번역 학습
 run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ```
