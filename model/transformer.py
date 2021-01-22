@@ -24,14 +24,9 @@ class SelfAttention(nn.Module):
     attention_score = matmul_result/math.sqrt(d_k)      # Scale
 
     if mask is not None:
-      # 마스크가 있는경우 뒤에 벡터들은 어텐션 받지 못하도록 마스킹 처리
-      # 마스크가 0인 곳에 -1e9로 마스킹 처리
-      # try:
       attention_score = attention_score.masked_fill(mask == 0, -1e20)
-      # except:
-      #   print('error')
 
-    softmax_attention_score = torch.softmax(attention_score,dim=-1)                   # 어텐션 값
+    softmax_attention_score = self.softmax(attention_score,dim=-1)                   # 어텐션 값
     result = self.matmul(softmax_attention_score,value)
 
     return result, softmax_attention_score
