@@ -24,7 +24,7 @@ AI Hub에 있는 한국어-영어 번역 데이터를 활용해 트랜스포머�
 - url: https://aihub.or.kr/sample_data_board
 #### ② AI Hub 한국어-영어 번역 데이터 - 구어체
 다운로드 후 구어체 데이터데 대하여 학습.
-**csv형태의 파일로 학습 데이터 생**
+**csv형태의 학습 데이터**
 ```text
 당신한테는 언제가 좋은가요?,When would be a good day for you?
 당신한테서 답장이 오면 난 하루가 행복해요.,I feel happy all day long if I get your reply.
