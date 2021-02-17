@@ -72,9 +72,9 @@ python3 train_translation.py
 ```
 
 ### Ko-En Translation Test
-- 번역의 성능은 예상보다 뛰어나지는 않음.
-- 학습데이터를 10000개, 220000개 정도로 나누어 학습했을때, 학습데이터가 많은 경우 수렴을 더 잘하게됨.
-- 더 많은 데이터 및 언어모델로 추가 학습해본다면 개선 가능성.
+- Translation test result isn't as good as expected
+- Training data is better 220000 data than 10000 data
+- If you use pretrained language model, you will get better results.
 ```text
 ko: 나는 먹고 자기만 했어요. en: I just had a lot of things.
 ------------------------------------------------------
