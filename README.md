@@ -1,9 +1,7 @@
 # Transformer
-[The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention)와 [pytorch 공식문서](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html)를 
-참고하여 트랜스포머를 직접 개발해보고 한글-영어 번역 태스크에 대해 학습 및 테스트.
-![](./images/transformer-translation.png)
+Simple transformer pytorch implementation refered from [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention), [pytorch official doc](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html).
+
 ## Model
-아래의 트랜스포머 모델의 구조에 따라 작성.
 ![](./images/transformer.png)
 
 ```text
@@ -16,15 +14,14 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ```
 
 ## Ko-En Translation
-AI Hub에 있는 한국어-영어 번역 데이터를 활용해 트랜스포머르 이용한 번역 태스크 학습
+Use AI Hub Ko-En translation dataset.
 ![](./images/transformer-translation.png)
 ### Data
-#### ① AI Hub 한국어-영어 번역 샘플 데이터.
-> 샘플 데이터의 경우 회원 가입 및 로그인 할 필요 없음.
-- url: https://aihub.or.kr/sample_data_board
-#### ② AI Hub 한국어-영어 번역 데이터 - 구어체
-다운로드 후 구어체 데이터데 대하여 학습.
-**csv형태의 학습 데이터**
+#### ① AI Hub Ko-En Translation Sample Data.
+- data url: https://aihub.or.kr/sample_data_board
+#### ② AI Hub Ko-En Translation Spoken Data
+download dataset and spoken data preprocessed to csv format 
+**csv format data**
 ```text
 당신한테는 언제가 좋은가요?,When would be a good day for you?
 당신한테서 답장이 오면 난 하루가 행복해요.,I feel happy all day long if I get your reply.
