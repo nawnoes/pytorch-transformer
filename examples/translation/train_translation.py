@@ -192,7 +192,7 @@ class TranslationTrainer():
 if __name__ == '__main__':
   torch.manual_seed(10)
   # dir_path = '/content/drive/My Drive/Colab Notebooks/transformer'
-  dir_path = '.'
+  dir_path = '../..'
   vocab_path = f'{dir_path}/data/wiki-vocab.txt'
   # data_path = f'{dir_path}/data/ko-en-spoken.csv'
   data_path = f'{dir_path}/data/test.csv'

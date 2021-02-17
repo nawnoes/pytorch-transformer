@@ -21,7 +21,8 @@ Use AI Hub Ko-En translation dataset.
 ##### ① AI Hub Ko-En Translation Sample Data.
 - data url: https://aihub.or.kr/sample_data_board
 ##### ② AI Hub Ko-En Translation Spoken Data
-download dataset and spoken data preprocessed to csv format 
+download dataset and spoken data preprocessed to csv format  
+   
 **csv format data**
 ```text
 당신한테는 언제가 좋은가요?,When would be a good day for you?

@@ -10,7 +10,7 @@ from transformers import BertTokenizer
 
 if __name__=="__main__":
   # project_dir = '/content/drive/My Drive/Colab Notebooks/transformer/'
-  project_dir = '.'
+  project_dir = '../..'
   vocab_path = f'{project_dir}/data/wiki-vocab.txt'
   data_path = f'{project_dir}/data/ko-en-translation.csv'
   checkpoint_path = f'{project_dir}/checkpoints'
