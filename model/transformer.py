@@ -11,25 +11,20 @@ self-Attention의 경우 Query Q, Key K, Value V를 입력으로 받아
 MatMul(Q,K) -> Scale -> Masking(opt. Decoder) -> Softmax -> MatMul(result, V)
 
 """
-class SelfAttention(nn.Module):
-  def __init__(self):
-    super(SelfAttention,self).__init__()
-    self.matmul = torch.matmul
-    self.softmax = torch.softmax
 
-  def forward(self,query, key, value, mask=None):
-    key_transpose = torch.transpose(key,-2,-1)          # (bath, head_num, d_k, token_)
-    matmul_result = self.matmul(query,key_transpose)    # MatMul(Q,K)
-    d_k = key.size()[-1]
-    attention_score = matmul_result/math.sqrt(d_k)      # Scale
+def self_attention(self,query, key, value, mask=None):
+  key_transpose = torch.transpose(key,-2,-1)                      # (bath, head_num, d_k, token_)
+  matmul_result = self.matmul(query,key_transpose)                # MatMul(Q,K)
+  d_k = key.size()[-1]
+  attention_score = matmul_result/math.sqrt(d_k)                  # Scale
 
-    if mask is not None:
-      attention_score = attention_score.masked_fill(mask == 0, -1e20)
+  if mask is not None:
+    attention_score = attention_score.masked_fill(mask == 0, -1e20)
 
-    softmax_attention_score = self.softmax(attention_score,dim=-1)                   # 어텐션 값
-    result = self.matmul(softmax_attention_score,value)
+  softmax_attention_score = self.softmax(attention_score,dim=-1)  # 어텐션 값
+  result = self.matmul(softmax_attention_score,value)
 
-    return result, softmax_attention_score
+  return result, softmax_attention_score
 
 
 """
@@ -58,7 +53,7 @@ class MultiHeadAttention(nn.Module):
     self.w_v = nn.Linear(d_model,d_model)
     self.w_o = nn.Linear(d_model,d_model)
 
-    self.self_attention = SelfAttention()
+    self.self_attention = self_attention()
     self.dropout = nn.Dropout(p=dropout)
 
   def forward(self, query, key, value, mask = None):
