@@ -13,13 +13,14 @@ train_translation.py﹒﹒﹒ 한국어-영어 번역 학습
 run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ```
 
-## Ko-En Translation
+## Example
+### 1. Ko-En Translation
 Use AI Hub Ko-En translation dataset.
 ![](./images/transformer-translation.png)
-### Data
-#### ① AI Hub Ko-En Translation Sample Data.
+#### Data
+##### ① AI Hub Ko-En Translation Sample Data.
 - data url: https://aihub.or.kr/sample_data_board
-#### ② AI Hub Ko-En Translation Spoken Data
+##### ② AI Hub Ko-En Translation Spoken Data
 download dataset and spoken data preprocessed to csv format 
 **csv format data**
 ```text
@@ -27,7 +28,7 @@ download dataset and spoken data preprocessed to csv format
 당신한테서 답장이 오면 난 하루가 행복해요.,I feel happy all day long if I get your reply.
 당신회사는 공장과 직접 일을 하나요?,Does your company work with the factory directly?
 ```
-### Train Setting
+#### Train Setting
 ```python
 # Model setting
 model_name = 'transformer-translation-spoken'
@@ -44,12 +45,12 @@ epochs = 50
 batch_size = 8
 learning_rate = 0.8
 ```
-### Training 
-`train_translation.py`를 사용해 번역 학습. 
+#### Training 
+train using `train_translation.py`. 
 ```sh
 python3 train_translation.py
 ```
-### Train Result
+#### Train Result
 - Epoch: 50
 
 ```
@@ -71,7 +72,7 @@ python3 train_translation.py
 -----------------------------------------------------------------------------------------
 ```
 
-### Ko-En Translation Test
+#### Ko-En Translation Test
 - Translation test result isn't as good as expected
 - Training data is better 220000 data than 10000 data
 - If you use pretrained language model, you will get better results.
