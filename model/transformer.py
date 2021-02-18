@@ -12,17 +12,17 @@ MatMul(Q,K) -> Scale -> Masking(opt. Decoder) -> Softmax -> MatMul(result, V)
 
 """
 
-def self_attention(self,query, key, value, mask=None):
+def self_attention(query, key, value, mask=None):
   key_transpose = torch.transpose(key,-2,-1)                      # (bath, head_num, d_k, token_)
-  matmul_result = self.matmul(query,key_transpose)                # MatMul(Q,K)
+  matmul_result = torch.matmul(query,key_transpose)                # MatMul(Q,K)
   d_k = key.size()[-1]
   attention_score = matmul_result/math.sqrt(d_k)                  # Scale
 
   if mask is not None:
     attention_score = attention_score.masked_fill(mask == 0, -1e20)
 
-  softmax_attention_score = self.softmax(attention_score,dim=-1)  # 어텐션 값
-  result = self.matmul(softmax_attention_score,value)
+  softmax_attention_score = torch.softmax(attention_score,dim=-1)  # 어텐션 값
+  result = torch.matmul(softmax_attention_score,value)
 
   return result, softmax_attention_score
 
@@ -53,7 +53,7 @@ class MultiHeadAttention(nn.Module):
     self.w_v = nn.Linear(d_model,d_model)
     self.w_o = nn.Linear(d_model,d_model)
 
-    self.self_attention = self_attention()
+    self.self_attention = self_attention
     self.dropout = nn.Dropout(p=dropout)
 
   def forward(self, query, key, value, mask = None):
@@ -204,13 +204,16 @@ class PositionalEncoding(nn.Module):
     x = x + Variable(self.positional_encoding[:, :x.size(1)], requires_grad=False)
     return self.dropout(x)
 
-# class Generator(nn.Module):
-#   def __init__(self, d_model, vocab_num):
-#     super(Generator, self).__init__()
-#     self.proj = nn.Linear(d_model, vocab_num)
-#
-#   def forward(self, x):
-#     return F.log_softmax(self.proj(x), dim=-1)
+
+class PositionalEmbedding(nn.Module):
+  def __init__(self, dim, max_seq_len):
+    super().__init__()
+    self.embedding = nn.Embedding(max_seq_len, dim)
+
+  def forward(self, x):
+    t = torch.arange(x.shape[1], device=x.device)
+    return self.embedding(t)
+
 class Generator(nn.Module):
   def __init__(self, d_model, vocab_num):
     super(Generator, self).__init__()
@@ -268,6 +271,26 @@ class Transformer(nn.Module):
     lm_logits = self.generator(target)
 
     return lm_logits
+
+class TransformerLM(nn.Module):
+  def __init__(self, vocab_size, dim=512,  depth= 12, max_seq_len=512, head_num=8, dropout= 0.1):
+    super(TransformerLM,self).__init__()
+
+    self.token_emb=Embeddings(vocab_size, dim)
+    self.position_emb = PositionalEmbedding(dim,max_seq_len)
+    self.encoders = clones(Encoder(d_model=dim, head_num=head_num, dropout=dropout), depth)
+    self.norm = nn.LayerNorm(dim)
+    self.lm_head = nn.Linear(dim, vocab_size)
+
+  def forward(self, input_ids, input_mask):
+    x = self.token_emb(input_ids)
+    x = x + self.position_emb(input_ids).type_as(x)
+
+    for encoder in self.encoders:
+      x = encoder(x, input_mask)
+    x = self.norm(x)
+
+    return self.lm_head(x), x  # lm_head, performer_embedding
 
 if __name__=="__main__":
   pass

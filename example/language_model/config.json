@@ -1,0 +1,14 @@
+{
+  "vocab_path" : "../../data/wiki-vocab.txt",
+  "data_path" :"../../data/wiki/" ,
+  "checkpoint_path" : "../../checkpoints",
+  "model_name": "transformer-mlm-small",
+  "dim": 512,
+  "depth": 6,
+  "n_head": 8,
+  "max_seq_len" : 512,
+  "batch_size" : 2,
+  "epochs" : 50,
+  "log_steps" : 1,
+  "ckpt_steps" : 500
+}
