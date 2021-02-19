@@ -272,20 +272,29 @@ def main():
     ]
 
     learning_rate = 3e-5
-    warmup_proportion = 0.1
-    num_train_epochs = 10.0
-    max_grad_norm = 1.0
     adam_epsilon = 1e-6
-    weight_decay = 0.01
 
-    num_train_optimization_steps = int(len(train_dataloader) / config.batch_size) * num_train_epochs
+    # warmup_proportion = 0.1
+    # num_train_epochs = 10.0
+    # max_grad_norm = 1.0
+    # adam_epsilon = 1e-6
+    # weight_decay = 0.01
+    # num_train_optimization_steps = int(len(train_dataloader) / config.batch_size) * num_train_epochs
 
     optimizer = AdamW(optimizer_grouped_parameters,
                       lr=learning_rate,
                       eps=adam_epsilon)
-    scheduler = WarmupLinearSchedule(optimizer,
-                                     warmup_steps=num_train_optimization_steps * 0.1,
-                                     t_total=num_train_optimization_steps)
+    # scheduler = WarmupLinearSchedule(optimizer,
+    #                                  warmup_steps=num_train_optimization_steps * 0.1,
+    #                                  t_total=num_train_optimization_steps)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer = optimizer,
+        max_lr = 0.0001,
+        pct_start = 0.01,
+        anneal_strategy = "linear",
+        epochs = config.epochs,
+        steps_per_epoch = len(train_dataloader)
+    )
     trainer.train(epochs=config.epochs,
                   train_dataloader=train_dataloader,
                   eval_dataloader=eval_dataloader,
