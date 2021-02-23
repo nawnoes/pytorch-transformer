@@ -1,9 +1,12 @@
 import warnings
 warnings.filterwarnings("ignore")
 import sys
+from fairseq.optim.adafactor import Adafactor
+
 # colab: /content/drive/My Drive/Colab Notebooks/transformer
 # local: ../
 sys.path.append('../')
+# sys.path.append('/content/drive/My Drive/Colab Notebooks/transformer')
 
 import torch
 import torch.nn as nn
@@ -80,9 +83,9 @@ class TransformeLMTrainer(object):
               train_dataloader,
               eval_dataloader,
               optimizer,
-              scheduler,
               log_steps,
-              ckpt_steps):
+              ckpt_steps,
+              gradient_accumulation_steps):
 
         loss_fn = nn.CrossEntropyLoss()
         losses = {}
@@ -110,6 +113,7 @@ class TransformeLMTrainer(object):
         logging.info(f'{datetime.now()} | Moved model to: {self.device} | train_batch_size: {self.train_batch_size} | eval_batch_size: {self.eval_batch_size}')
         logging.info(f'{datetime.now()} | Epochs: {epochs} | log_steps: {log_steps} | ckpt_steps: {ckpt_steps}')
 
+        self.model.zero_grad()  # Reset gradients tensors
         for epoch in range(start_epoch, epochs): #tqdm(range(epochs), desc='Epochs', position=0):
             logging.info(f'{datetime.now()} | Epoch: {epoch}')
             pb = tqdm(enumerate(train_dataloader),
@@ -129,26 +133,29 @@ class TransformeLMTrainer(object):
                 output= output[loss_mx].view(-1, self.tokenizer.vocab_size)
                 labels = labels[loss_mx].view(-1)
 
-                loss = loss_fn(output, labels)
+                origin_loss = loss_fn(output, labels)
+                loss = origin_loss / gradient_accumulation_steps       # divide loss into gradient accumulation step
                 loss.backward()
 
-                step_loss += loss.item()
-                losses[global_steps] = loss.item()
+                losses[global_steps] = origin_loss.item()
+                step_loss += origin_loss.item()
+
                 local_steps += 1
                 global_steps += 1
 
-                scheduler.step()
-                optimizer.step()
-                optimizer.zero_grad()
+                if (global_steps+1) % gradient_accumulation_steps == 0:
+                    optimizer.step()
+                    self.model.zero_grad()
 
                 # print log
                 if global_steps % log_steps == 0:
                     if self.tb_writer:
                         self.writer.add_scalar('Train/Loss', step_loss / local_steps, global_steps)
                         self.writer.close()
-                    pb.set_postfix_str(f'''{datetime.now()} | Train Loss: {step_loss / local_steps} | Learning Rate: {scheduler.get_lr()} | Steps: {global_steps}''')
+                    pb.set_postfix_str(f'''{datetime.now()} | Train Loss: {step_loss / local_steps} | Steps: {global_steps}''')
                     step_loss = 0.0
                     local_steps = 0
+
                 # save model & log
                 if global_steps % ckpt_steps == 0:
                     self.save(epoch, self.model, optimizer, losses, global_steps)
@@ -161,6 +168,7 @@ class TransformeLMTrainer(object):
             self.evaluate(eval_dataloader)
             self.model.train()
             start_step = 0
+
         # save model
         self.save(epochs,self.model,optimizer,losses, global_steps)
 
@@ -224,11 +232,11 @@ def main():
     torch.manual_seed(9)
     # base_path = '/content/drive/My Drive/Colab Notebooks/transformer'
     base_path = '../..'
-    log_dir = f'{base_path}/log'
-    # config_path = f'{}'
+    log_dir = f'{base_path}/logs'
+    config_path = f'{base_path}/example/language_model/config.json'
 
     # Config
-    config = ModelConfig(config_path='./config.json').get_config()
+    config = ModelConfig(config_path=config_path).get_config()
 
     # Tokenizer
     tokenizer = BertTokenizer(vocab_file=config.vocab_path, do_lower_case=False)
@@ -281,27 +289,29 @@ def main():
     # weight_decay = 0.01
     # num_train_optimization_steps = int(len(train_dataloader) / config.batch_size) * num_train_epochs
 
-    optimizer = AdamW(optimizer_grouped_parameters,
-                      lr=learning_rate,
-                      eps=adam_epsilon)
+    # optimizer = AdamW(optimizer_grouped_parameters,
+    #                   lr=learning_rate,
+    #                   eps=adam_epsilon)
+    optimizer = Adafactor(params=model.parameters())
     # scheduler = WarmupLinearSchedule(optimizer,
     #                                  warmup_steps=num_train_optimization_steps * 0.1,
     #                                  t_total=num_train_optimization_steps)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer = optimizer,
-        max_lr = 0.0001,
-        pct_start = 0.01,
-        anneal_strategy = "linear",
-        epochs = config.epochs,
-        steps_per_epoch = len(train_dataloader)
-    )
+    # scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    #     optimizer = optimizer,
+    #     max_lr = 0.0001,
+    #     pct_start = 0.01,
+    #     anneal_strategy = "linear",
+    #     epochs = config.epochs,
+    #     steps_per_epoch = len(train_dataloader)
+    # )
+
     trainer.train(epochs=config.epochs,
                   train_dataloader=train_dataloader,
                   eval_dataloader=eval_dataloader,
                   optimizer=optimizer,
-                  scheduler=scheduler,
                   log_steps=config.log_steps,
-                  ckpt_steps=config.ckpt_steps)
+                  ckpt_steps=config.ckpt_steps,
+                  gradient_accumulation_steps=config.gradient_accumulation_steps )
 
 if __name__ == '__main__':
     main()
