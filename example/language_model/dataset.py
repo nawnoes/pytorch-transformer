@@ -1,10 +1,8 @@
 import os
 import torch
 import logging
-from tqdm import tqdm
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import BertTokenizer
+from torch.utils.data import Dataset
 
 
 class DatasetForMLM(Dataset):
@@ -80,4 +78,4 @@ class DatasetForMLM(Dataset):
     inputs_mask = inputs != 0
     labels = labels.squeeze()
 
-    return inputs, inputs_mask.unsqueeze(1), labels
+    return inputs, inputs_mask.unsqueeze(0), labels

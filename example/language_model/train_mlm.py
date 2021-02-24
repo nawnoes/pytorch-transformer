@@ -144,7 +144,7 @@ class TransformeLMTrainer(object):
                 local_steps += 1
                 global_steps += 1
 
-                if (global_steps+1) % gradient_accumulation_steps == 0:
+                if global_steps % gradient_accumulation_steps == 0:
                     optimizer.step()
                     self.model.zero_grad()
 
