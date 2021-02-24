@@ -133,12 +133,13 @@ class TransformeLMTrainer(object):
                 output= output[loss_mx].view(-1, self.tokenizer.vocab_size)
                 labels = labels[loss_mx].view(-1)
 
-                origin_loss = loss_fn(output, labels)
-                loss = origin_loss / gradient_accumulation_steps       # divide loss into gradient accumulation step
+                loss = loss_fn(output, labels)
+                origin_loss = loss.item()
+                loss = loss / gradient_accumulation_steps       # divide loss into gradient accumulation step
                 loss.backward()
 
-                losses[global_steps] = origin_loss.item()
-                step_loss += origin_loss.item()
+                losses[global_steps] = origin_loss
+                step_loss += origin_loss
 
                 local_steps += 1
                 global_steps += 1
@@ -229,7 +230,7 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def main():
-    torch.manual_seed(9)
+    # torch.manual_seed(9)
     # base_path = '/content/drive/My Drive/Colab Notebooks/transformer'
     base_path = '../..'
     log_dir = f'{base_path}/logs'
