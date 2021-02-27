@@ -83,6 +83,7 @@ class TransformeLMTrainer(object):
               train_dataloader,
               eval_dataloader,
               optimizer,
+              scheduler,
               log_steps,
               ckpt_steps,
               gradient_accumulation_steps):
@@ -105,6 +106,7 @@ class TransformeLMTrainer(object):
 
             self.model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
         # Model Setting
         self.model.train()
@@ -145,6 +147,7 @@ class TransformeLMTrainer(object):
                 global_steps += 1
 
                 if global_steps % gradient_accumulation_steps == 0:
+                    scheduler.step()
                     optimizer.step()
                     self.model.zero_grad()
 
@@ -159,7 +162,7 @@ class TransformeLMTrainer(object):
 
                 # save model & log
                 if global_steps % ckpt_steps == 0:
-                    self.save(epoch, self.model, optimizer, losses, global_steps)
+                    self.save(epoch, self.model, optimizer,scheduler, losses, global_steps)
                     logging.info(f'{datetime.now()} | Saved checkpoint to: {self.checkpoint_path}')
                     with open(f'{self.log_dir}/{self.model_name}-train-log.json', 'w') as results_file:
                       json.dump(losses, results_file)
@@ -171,7 +174,7 @@ class TransformeLMTrainer(object):
             start_step = 0
 
         # save model
-        self.save(epochs,self.model,optimizer,losses, global_steps)
+        self.save(epochs,self.model,optimizer,scheduler,losses, global_steps)
 
     def evaluate(self, dataloader):
         loss_fn = nn.CrossEntropyLoss()
@@ -217,11 +220,12 @@ class TransformeLMTrainer(object):
                 results_file.write(f'{datetime.now()} | Step: {step} | Eval Loss: {total_eval_loss}\n')
                 results_file.close()
 
-    def save(self, epoch, model, optimizer, losses, train_step):
+    def save(self, epoch, model, optimizer,scheduler, losses, train_step):
         torch.save({
             'epoch': epoch,  # 현재 학습 epoch
             'model_state_dict': model.state_dict(),  # 모델 저장
             'optimizer_state_dict': optimizer.state_dict(),  # 옵티마이저 저장
+            'scheduler_state_dict': scheduler.state_dict(),
             'losses': losses,  # Loss 저장
             'train_step': train_step,  # 현재 진행한 학습
         }, f'{self.checkpoint_path}/{self.model_name}.pth')
@@ -290,26 +294,27 @@ def main():
     # weight_decay = 0.01
     # num_train_optimization_steps = int(len(train_dataloader) / config.batch_size) * num_train_epochs
 
-    # optimizer = AdamW(optimizer_grouped_parameters,
-    #                   lr=learning_rate,
-    #                   eps=adam_epsilon)
-    optimizer = Adafactor(params=model.parameters())
+    optimizer = AdamW(optimizer_grouped_parameters,
+                      lr=learning_rate,
+                      eps=adam_epsilon)
+    # optimizer = Adafactor(params=model.parameters())
     # scheduler = WarmupLinearSchedule(optimizer,
     #                                  warmup_steps=num_train_optimization_steps * 0.1,
     #                                  t_total=num_train_optimization_steps)
-    # scheduler = torch.optim.lr_scheduler.OneCycleLR(
-    #     optimizer = optimizer,
-    #     max_lr = 0.0001,
-    #     pct_start = 0.01,
-    #     anneal_strategy = "linear",
-    #     epochs = config.epochs,
-    #     steps_per_epoch = len(train_dataloader)
-    # )
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer = optimizer,
+        max_lr = 0.0001,
+        pct_start = 0.01,
+        anneal_strategy = "linear",
+        epochs = config.epochs,
+        steps_per_epoch = len(train_dataloader)
+    )
 
     trainer.train(epochs=config.epochs,
                   train_dataloader=train_dataloader,
                   eval_dataloader=eval_dataloader,
                   optimizer=optimizer,
+                  scheduler=scheduler,
                   log_steps=config.log_steps,
                   ckpt_steps=config.ckpt_steps,
                   gradient_accumulation_steps=config.gradient_accumulation_steps )
