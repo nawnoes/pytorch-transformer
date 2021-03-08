@@ -14,7 +14,17 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ```
 
 ## Example
-### 1. Ko-En Translation
+### 1. Masked Language Model
+![](https://amitness.com/images/nlp-ssl-masked-lm.png)
+Pretrain transformer on masked language model task and finetuning test on korquad 1.0 dataset.
+korquad 1.0 is korean squad dataset.  
+
+|       model       | exact_match | f1 score|
+|:-----------------:|-------------|---------|
+|  transformer-mlm  |    56.47    |  83.04  |
+|      KoBERT       |    51.75    |  79.15  |
+
+### 2. Ko-En Translation
 Use AI Hub Ko-En translation dataset.
 ![](./images/transformer-translation.png)
 #### Data
