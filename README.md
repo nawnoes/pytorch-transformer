@@ -2,7 +2,7 @@
 Simple transformer pytorch implementation refered from [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention), [pytorch official doc](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html).
 
 ## Model
-![](./images/transformer.png)
+![](./images/transformer_model.png)
 
 ```text
 model
