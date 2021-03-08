@@ -17,7 +17,14 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ### 1. Masked Language Model
 Pretrain transformer for masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
 ![](./images/masked_language_model.png)
-
+#### Model Config
+```
+  "dim": 512,
+  "depth": 6,
+  "n_head": 8,
+  "max_seq_len" : 512,
+```
+#### KorQuAD 1.0 Result
 |           model         | exact_match | f1 score|
 |:-----------------------:|-------------|---------|
 |  transformer-mlm-small  |    56.47    |  83.04  |
