@@ -16,7 +16,7 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ## Example
 ### 1. Masked Language Model
 Pretrain transformer for masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
-![](https://amitness.com/images/nlp-ssl-masked-lm.png)
+![](./images/masked_language_model.png)
 
 |           model         | exact_match | f1 score|
 |:-----------------------:|-------------|---------|
