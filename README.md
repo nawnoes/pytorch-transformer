@@ -14,7 +14,7 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ```
 
 ## Example
-### 1. Masked Language Model
+### 1. Masked Language Model(ex. BERT)
 Pretrain masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
 ![](./images/masked_language_model.png)
 
