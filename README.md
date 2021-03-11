@@ -1,5 +1,5 @@
 # Transformer
-Simple transformer pytorch implementation refered from [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention), [pytorch official doc](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html).
+Simple transformer pytorch implementation refered from [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention), [Pytorch Official Docs](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html).
 
 ## Model
 ![](./images/transformer_model.png)
@@ -15,7 +15,7 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 
 ## Example
 ### 1. Masked Language Model
-Pretrain transformer for masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
+Pretrain masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
 ![](./images/masked_language_model.png)
 
 ### Usage
@@ -124,19 +124,6 @@ ko: 가정집을 개조한 분위기 좋은 레스토랑이 있습니다. en: Th
 ko: 가난뱅이인 제가 당신을 어떻게 사랑할 수 있습니까? en: How can I love you and love you?
 ```
 
-
-## Issue
-### 1. encoder 마스킹 에러
-mask에 unsqueeze(1)을 통해 하나의 차원을 추가필요.
-```py
-  mask = mask.unsqueeze(1)
-  attention_score = attention_score.masked_fill(mask == 0, -1e9)
-```
-### 2. max_seq_len이 긴경우
-```text
-대부분의 문장이 짧게 구성되어 있다. 최초에 512 토근으로 지정후 학습하면, 시간도 느리고, pad 토큰에 대해 학습하여
-성능이 좋지 않았다.
-```
-
 ## References
 - http://nlp.seas.harvard.edu/2018/04/03/attention
+- https://tutorials.pytorch.kr/beginner/transformer_tutorial.html
