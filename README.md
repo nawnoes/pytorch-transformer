@@ -17,6 +17,15 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 ### 1. Masked Language Model
 Pretrain transformer for masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
 ![](./images/masked_language_model.png)
+
+### Usage
+```txt
+① move all directory and file to Colab  
+② configuration check in example/language_model/config.json 
+③ prepare data, vocab 
+④ run train-mlm.ipynb for Masked language model 
+⑤ run  korquad-transformer-mlm.ipynb for korquad 1.0
+```
 #### Model Config
 ```
   "dim": 512,
