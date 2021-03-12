@@ -1,5 +1,5 @@
 # Transformer
-파이토치를 이용한 트랜스포머 구현과 예제 
+파이토치를 이용한 트랜스포머 구현 및 언어모델과 기계번역 테스트. 
 
 ## Model
 ![](./images/transformer_model.png)
