@@ -1,5 +1,5 @@
 # Transformer
-파이토치를 이용한 트랜스포머 구현과 예제 
+Simple transformer pytorch implementation refered from [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention), [Pytorch Official Docs](https://tutorials.pytorch.kr/beginner/transformer_tutorial.html).
 
 ## Model
 ![](./images/transformer_model.png)
@@ -15,16 +15,16 @@ run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
 
 ## Example
 ### 1. Masked Language Model(ex. BERT)
-BERT에서 사용한 MLM을 이용한 언어모델 Pretraining 
+Pretrain masked language model task and finetune on korean squad dataset(KorQuAD 1.0). 
 ![](./images/masked_language_model.png)
 
 ### Usage
 ```txt
-① 디렉토리 및 파일 코랩으로 이동 
-② example/language_model/config.json 경로의 학습할 설정 확인 
-③ Pretraining 할 Data와 Vocab 확인 
-④ train-mlm.ipynb로 Pretraining 
-⑤ Pretraining 완료 후 korquad-transformer-mlm.ipynb로 Korquad 학습 및 테스트 
+① move all directory and file to Colab  
+② configuration check in example/language_model/config.json 
+③ prepare data, vocab 
+④ run train-mlm.ipynb for Masked language model 
+⑤ run  korquad-transformer-mlm.ipynb for korquad 1.0
 ```
 #### Model Config
 ```
@@ -40,14 +40,14 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 |      KoBERT             |    51.75    |  79.15  |
 
 ### 2. Ko-En Translation
-AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
+Use AI Hub Ko-En translation dataset.
 ![](./images/transformer-translation.png)
 #### Data
 ##### ① AI Hub Ko-En Translation Sample Data.
 - data url: https://aihub.or.kr/sample_data_board
 ##### ② AI Hub Ko-En Translation Spoken Data
-구어체 번역 데이터 사용.  
-  
+download dataset and spoken data preprocessed to csv format  
+   
 **csv format data**
 ```text
 당신한테는 언제가 좋은가요?,When would be a good day for you?
@@ -72,7 +72,7 @@ batch_size = 8
 learning_rate = 0.8
 ```
 #### Training 
-`train_translation.py`으로 번역 모델 학습.  
+train using `train_translation.py`. 
 ```sh
 python3 train_translation.py
 ```
@@ -99,7 +99,9 @@ python3 train_translation.py
 ```
 
 #### Ko-En Translation Test
--  10000 데이터 대비, 220000 데이터에서 더 좋은 성능
+- Translation test result isn't as good as expected
+- Training data is better 220000 data than 10000 data
+- If you use pretrained language model, you will get better results.
 ```text
 ko: 나는 먹고 자기만 했어요. en: I just had a lot of things.
 ------------------------------------------------------
