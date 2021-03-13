@@ -37,9 +37,9 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 |           model         | exact_match | f1 score|
 |:------------------------|-------------|---------|
 |          KoBERT         |    51.75    |  79.15  |
-|**transformer-mlm-small**|    56.47    |  83.04  |
+|**transformer-mlm-small**|  **56.47**  |**83.04**|
 |   reformer-bert-small   |    52.1     |  79.02  |
-|  Reformer-ELECTRA-small |    52.04    |  78.53  |
+|  Reformer-electra-small |    52.04    |  78.53  |
 
 
 
