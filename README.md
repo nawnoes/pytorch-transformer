@@ -35,9 +35,13 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ```
 #### KorQuAD 1.0 Result
 |           model         | exact_match | f1 score|
-|:-----------------------:|-------------|---------|
-|  transformer-mlm-small  |    56.47    |  83.04  |
-|      KoBERT             |    51.75    |  79.15  |
+|:------------------------|-------------|---------|
+|          KoBERT         |    51.75    |  79.15  |
+|**transformer-mlm-small**|    56.47    |  83.04  |
+|   reformer-bert-small   |    52.1     |  79.02  |
+|  Reformer-ELECTRA-small |    52.04    |  78.53  |
+
+
 
 ### 2. Ko-En Translation
 AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
