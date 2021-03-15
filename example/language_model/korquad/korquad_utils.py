@@ -14,7 +14,7 @@ import string
 from io import open
 
 from transformers import BasicTokenizer
-from example.language_model.tokenization import whitespace_tokenize
+from example.language_model.korquad.tokenization import whitespace_tokenize
 
 logger = logging.getLogger(__name__)
 

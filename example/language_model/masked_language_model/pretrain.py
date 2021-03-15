@@ -2,7 +2,6 @@ import warnings
 
 warnings.filterwarnings("ignore")
 import sys
-from fairseq.optim.adafactor import Adafactor
 
 # colab: /content/drive/My Drive/Colab Notebooks/transformer
 # local: ../
@@ -22,9 +21,8 @@ import os
 import json
 import logging
 from datetime import datetime
-from example.language_model.dataset import DatasetForMLM
-from example.language_model.arg import ModelConfig
-from example.language_model.schedule import WarmupLinearSchedule
+from example.language_model.common.dataset import DatasetForMLM
+from example.language_model.common.arg import ModelConfig
 from model.transformer import TransformerLM
 
 
@@ -268,6 +266,7 @@ def main():
                                 train_batch_size=config.batch_size,
                                 eval_batch_size=config.batch_size,
                                 log_dir=log_dir)
+
   # dataloader
   train_dataloader, eval_dataloader = trainer.build_dataloaders(train_test_split=0.1)
 
@@ -284,20 +283,10 @@ def main():
   learning_rate = 2e-3
   adam_epsilon = 1e-6
 
-  # warmup_proportion = 0.1
-  # num_train_epochs = 10.0
-  # max_grad_norm = 1.0
-  # adam_epsilon = 1e-6
-  # weight_decay = 0.01
-  # num_train_optimization_steps = int(len(train_dataloader) / config.batch_size) * num_train_epochs
-
   optimizer = AdamW(optimizer_grouped_parameters,
                     lr=learning_rate,
                     eps=adam_epsilon)
-  # optimizer = Adafactor(params=model.parameters())
-  # scheduler = WarmupLinearSchedule(optimizer,
-  #                                  warmup_steps=num_train_optimization_steps * 0.1,
-  #                                  t_total=num_train_optimization_steps)
+
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer,  # Optimzer
                                               step_size=len(train_dataloader),  # Gamma 비율로 줄일 스텝사이즈
                                               gamma=0.9)  # lr줄이는 비율
