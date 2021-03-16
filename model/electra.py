@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from model.util import clones
 import torch.nn.functional as F
-from model.util import log,gumbel_sample, mask_with_tokens, prob_mask_like, get_mask_subset_with_prob
+from model.util import log, gumbel_sample, mask_with_tokens, prob_mask_like, get_mask_subset_with_prob
 from model.transformer import PositionalEmbedding,Encoder
 
 Results = namedtuple('Results', [
@@ -18,16 +18,15 @@ Results = namedtuple('Results', [
 ])
 
 class TransformerEncoderModel(nn.Module):
-  def __init__(self, config):
+  def __init__(self, vocab_size, dim, embed_dim, max_seq_len, depth, head_num, dropout =0.1):
     super(TransformerEncoderModel,self).__init__()
-    self.config = config
-    self.token_emb= nn.Embedding(config.vocab_size, config.embed_dim)
-    self.position_emb = PositionalEmbedding(config.dim, config.max_seq_len)
-    self.encoders = clones(Encoder(d_model=config.dim, head_num=config.head_num, dropout=config.dropout), config.depth)
-    self.norm = nn.LayerNorm(config.dim)
+    self.token_emb= nn.Embedding(vocab_size, embed_dim)
+    self.position_emb = PositionalEmbedding(dim, max_seq_len)
+    self.encoders = clones(Encoder(d_model=dim, head_num=head_num, dropout=dropout), depth)
+    self.norm = nn.LayerNorm(dim)
 
-    if config.dim != config.embed_dim:
-      self.embeddings_project = nn.Linear(config.embed_dim, config.dim)
+    if dim != embed_dim:
+      self.embeddings_project = nn.Linear(embed_dim, dim)
 
   def get_input_embeddings(self):
       return self.token_emb
@@ -35,11 +34,23 @@ class TransformerEncoderModel(nn.Module):
   def set_input_embeddings(self, value):
       self.token_emb = value
 
+  def _tie_or_clone_weights(self, first_module, second_module):
+    """ Tie or clone module weights depending of weither we are using TorchScript or not
+    """
+
+    if self.config.torchscript:
+      first_module.weight = nn.Parameter(second_module.weight.clone())
+    else:
+      first_module.weight = second_module.weight
+
+    if hasattr(first_module, 'bias') and first_module.bias is not None:
+      first_module.bias.data = torch.nn.functional.pad(first_module.bias.data, (0, first_module.weight.shape[0] - first_module.bias.shape[0]),'constant',0)
+
   def forward(self, input_ids, input_mask):
     x = self.token_emb(input_ids)
     x = x + self.position_emb(input_ids).type_as(x)
 
-    if self.config.embed_dim != self.config.dim:
+    if self.embed_dim != self.dim:
       x = self.embeddings_project(x)
 
     for encoder in self.encoders:
@@ -48,43 +59,61 @@ class TransformerEncoderModel(nn.Module):
 
     return x
 class GeneratorHead(nn.Module):
-  def __init__(self, config):
+  def __init__(self, vocab_size, dim, embed_dim, layer_norm_eps):
     super().__init__()
-    self.config = config
-    self.dense = nn.Linear(config.hidden_size, config.embedding_size)
+    self.vocab_size = vocab_size
 
-    self.LayerNorm = nn.LayerNorm(config.embedding_size, eps=config.layer_norm_eps)
-    self.decoder = nn.Linear(config.embedding_size, config.vocab_size, bias=False)
-    self.bias = nn.Parameter(torch.zeros(config.vocab_size))
+    self.dense = nn.Linear(dim, dim)
+    self.activation = F.gelu()
+    self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
+    self.decoder = nn.Linear(embed_dim, vocab_size, bias=False)
+    self.bias = nn.Parameter(torch.zeros(vocab_size))
 
     # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
     self.decoder.bias = self.bias
 
+  def forward(self, hidden_states, masked_lm_labels=None):
+    hidden_states = self.dense(hidden_states)
+    hidden_states = self.activation(hidden_states)
+    hidden_states = self.norm(hidden_states)
 
-def forward(self, hidden_states, masked_lm_labels=None):
-  hidden_states = self.dense(hidden_states)
-  hidden_states = self.transform_act_fn(hidden_states)
-  hidden_states = self.LayerNorm(hidden_states)
+    logits = self.decoder(hidden_states)
+    outputs = (logits,)
 
-  logits = self.decoder(hidden_states)
-  outputs = (logits,)
-
-  if masked_lm_labels is not None:
-    loss_fct = nn.CrossEntropyLoss()
-    genenater_loss = loss_fct(logits.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
-    outputs += (genenater_loss,)
-  return outputs
+    if masked_lm_labels is not None:
+      loss_fct = nn.CrossEntropyLoss()
+      genenater_loss = loss_fct(logits.view(-1, self.vocab_size), masked_lm_labels.view(-1))
+      outputs += (genenater_loss,)
+    return outputs
 
 class DiscriminatorHead(nn.Module):
-  def __init__(self):
-    pass
-  def forward(self):
-    pass
+  def __init__(self, dim, layer_norm_eps):
+    super().__init__()
+    self.dense = nn.Linear(dim, dim)
+    self.activation = F.gelu()
+    self.LayerNorm = nn.LayerNorm(dim, eps=layer_norm_eps)
+    self.classifier = nn.Linear(dim, 1)
+
+  def forward(self, hidden_states,is_replaced_label = None):
+    hidden_states = self.dense(hidden_states)
+    hidden_states = self.activation(hidden_states)
+    hidden_states = self.LayerNorm(hidden_states)
+    logits = self.classifier(hidden_states)
+
+    outputs = (logits,)
+
+    if is_replaced_label is not None:
+      loss_fct = nn.BCEWithLogitsLoss()
+      discriminator_loss = loss_fct(logits.view(-1), is_replaced_label.view(-1))
+      outputs += (discriminator_loss,)
+
+    return outputs
 
 class Electra(nn.Module):
   def __init__(self,
-               generator,
-               discriminator,
+               config,
+               gen_config,
+               disc_config,
                num_tokens,
                mask_token_id,
                pad_token_id,
@@ -97,8 +126,24 @@ class Electra(nn.Module):
                temperature=1.):
     super().__init__()
 
-    self.generator = generator
-    self.discriminator = discriminator
+    self.generator = TransformerEncoderModel(vocab_size=config.vocab_size,
+                                             max_seq_len=config.max_seq_len,
+                                             dim=gen_config.dim,
+                                             embed_dim=gen_config.embed_dim,
+                                             depth=gen_config.depth,
+                                             head_num=gen_config.head_num)
+    self.generator_head = GeneratorHead(vocab_size=config.vocab_size,
+                                        dim=gen_config.dim,
+                                        embed_dim=gen_config.embed_dim)
+
+    self.discriminator = TransformerEncoderModel(vocab_size=config.vocab_size,
+                                             max_seq_len=config.max_seq_len,
+                                             dim=disc_config.dim,
+                                             embed_dim=disc_config.embed_dim,
+                                             depth=disc_config.depth,
+                                             head_num=disc_config.head_num)
+    self.discriminator_head = DiscriminatorHead(dim=disc_config.dim,
+                                                embed_dim=disc_config.embed_dim)
 
     # mlm related probabilities
     self.mask_prob = mask_prob

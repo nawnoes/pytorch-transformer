@@ -1,0 +1,12 @@
+{
+  "vocab_path" : "../data/wpm-vocab-all.txt",
+  "checkpoint_path" : "../checkpoints/electra_model_state_dict.pt",
+  "generator_config_path": "../config/generator.json",
+  "discriminator_config_path": "../config/discriminator.json",
+  "max_len" : 512,
+  "batch_size" : 32,
+  "epochs" : 30,
+  "log_steps" : 2,
+  "ckpt_steps" : 100,
+  "gradient_accumulation_steps" : 1
+}
