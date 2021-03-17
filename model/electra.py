@@ -164,7 +164,7 @@ class Electra(nn.Module):
     self.disc_weight = disc_weight
     self.gen_weight = gen_weight
 
-  def forward(self, input, **kwargs):
+  def forward(self, input, input_mask):
     b, t = input.shape
 
     replace_prob = prob_mask_like(input, self.replace_prob)
@@ -199,18 +199,19 @@ class Electra(nn.Module):
     gen_labels = input.masked_fill(~mask, self.pad_token_id)
 
     # get generator output and get mlm loss
-    logits = self.generator(masked_input, **kwargs)
-
+    output = self.generator(input_ids=masked_input, input_mask=input_mask)
+    outupt = self.generator_head(output, masked_lm_labels=gen_labels)
     # nn.CrossEntropyLoss()(logits[mask_indices].view(-1,22000),gen_labels[mask_indices])
     # 위 함수로 loss를 해도 동일
-    mlm_loss = F.cross_entropy(
-      logits.transpose(1, 2),
-      gen_labels,
-      ignore_index=self.pad_token_id
-    )
+    # mlm_loss = F.cross_entropy(
+    #   logits.transpose(1, 2),
+    #   gen_labels,
+    #   ignore_index=self.pad_token_id
+    # )
+    mlm_loss = output[1] # mlm loss
 
     # use mask from before to select logits that need sampling
-    sample_logits = logits[mask_indices]
+    sample_logits = output[0][mask_indices] #### <- 확인 부분
 
     # sample
     sampled = gumbel_sample(sample_logits, temperature=self.temperature)
