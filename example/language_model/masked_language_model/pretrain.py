@@ -11,12 +11,9 @@ sys.path.append('/content/drive/My Drive/Colab Notebooks/transformer')
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
-
 from tqdm import tqdm
-
 from transformers import BertTokenizer
 from transformers.optimization import AdamW
-
 import os
 import json
 import logging
@@ -40,8 +37,6 @@ class TransformeLMTrainer(object):
                device=None,
                train_batch_size=8,
                eval_batch_size=None,
-               tb_writer=False,
-               tb_dir='./tb_logs',
                log_dir='../logs'):
     self.dataset = dataset
     self.model = model
@@ -53,7 +48,6 @@ class TransformeLMTrainer(object):
     self.n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
     self.train_batch_size = train_batch_size
     self.eval_batch_size = eval_batch_size
-    self.tb_writer = tb_writer
     self.log_dir = log_dir
 
     if device is None:

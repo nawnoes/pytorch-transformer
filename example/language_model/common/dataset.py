@@ -4,7 +4,7 @@ import logging
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 
-
+# Dataset for prtraining Masked Language Model
 class DatasetForMLM(Dataset):
   def __init__(self, tokenizer, max_len, path="../data/namuwiki.txt"):
     logging.info('start wiki data load')
@@ -79,3 +79,45 @@ class DatasetForMLM(Dataset):
     labels = labels.squeeze()
 
     return inputs, inputs_mask.unsqueeze(0), labels
+
+# Dataset for pretraining Electra
+class DatasetElectra(Dataset):
+    def __init__(self, tokenizer, max_len, path):
+        logging.info('Start pretraining data load!')
+
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+        self.docs = []
+
+        # 파일 리스트
+        file_list = os.listdir(path)
+
+        # num_lines = sum(1 for line in open(path, 'r',encoding='utf-8'))
+        for file_name in file_list:  # file_progress_bar:
+          path = f'{path}/{file_name}'
+          data_file = open(path, 'r', encoding='utf-8')
+          for line in data_file:  # tqdm(data_file,desc='Data load for pretraining',position=1, leave=True):
+            line = line[:-1]
+            self.docs.append(line)
+        logging.info('complete data load')
+
+    def _tokenize_input_ids(self, input_ids: list, pad_to_max_length: bool = True):
+        inputs = torch.tensor(self.tokenizer.encode(input_ids, add_special_tokens=False, max_length=self.max_len, pad_to_max_length=pad_to_max_length, return_tensors='pt',truncation=True))
+        return inputs
+
+    def _pad_token(self, inputs):
+        input_pads = self.max_len - inputs.shape[-1]
+        return F.pad(inputs, pad=(0, input_pads), value=self.tokenizer.pad_token_id)
+
+    def __len__(self):
+        """ Returns the number of documents. """
+        return len(self.docs)
+
+    def __getitem__(self, idx):
+        inputs = self._tokenize_input_ids(self.docs[idx], pad_to_max_length=True)
+        inputs = self._pad_token(inputs)
+
+        inputs= inputs.squeeze()
+        inputs_mask = inputs != 0
+
+        return inputs, inputs_mask.unsqueeze(0)

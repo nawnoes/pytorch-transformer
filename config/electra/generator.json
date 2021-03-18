@@ -1,8 +1,6 @@
 {
-    "emb_dim":768,
+    "emb_dim":128,
     "dim":256,
-    "heads":4,
-    "ff_mult":2,
-    "dim_head":64,
+    "head_num":4,
     "depth":12
 }

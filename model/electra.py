@@ -18,15 +18,18 @@ Results = namedtuple('Results', [
 ])
 
 class TransformerEncoderModel(nn.Module):
-  def __init__(self, vocab_size, dim, embed_dim, max_seq_len, depth, head_num, dropout =0.1):
+  def __init__(self, vocab_size, dim, emb_dim, max_seq_len, depth, head_num, dropout =0.1):
     super(TransformerEncoderModel,self).__init__()
-    self.token_emb= nn.Embedding(vocab_size, embed_dim)
-    self.position_emb = PositionalEmbedding(dim, max_seq_len)
+    self.dim=dim
+    self.emb_dim=emb_dim
+
+    self.token_emb= nn.Embedding(vocab_size, emb_dim)
+    self.position_emb = PositionalEmbedding(emb_dim, max_seq_len)
     self.encoders = clones(Encoder(d_model=dim, head_num=head_num, dropout=dropout), depth)
     self.norm = nn.LayerNorm(dim)
 
-    if dim != embed_dim:
-      self.embeddings_project = nn.Linear(embed_dim, dim)
+    if dim != emb_dim:
+      self.embeddings_project = nn.Linear(emb_dim, dim)
 
   def get_input_embeddings(self):
       return self.token_emb
@@ -37,7 +40,6 @@ class TransformerEncoderModel(nn.Module):
   def _tie_or_clone_weights(self, first_module, second_module):
     """ Tie or clone module weights depending of weither we are using TorchScript or not
     """
-
     if self.config.torchscript:
       first_module.weight = nn.Parameter(second_module.weight.clone())
     else:
@@ -50,7 +52,7 @@ class TransformerEncoderModel(nn.Module):
     x = self.token_emb(input_ids)
     x = x + self.position_emb(input_ids).type_as(x)
 
-    if self.embed_dim != self.dim:
+    if self.emb_dim != self.dim:
       x = self.embeddings_project(x)
 
     for encoder in self.encoders:
@@ -59,14 +61,14 @@ class TransformerEncoderModel(nn.Module):
 
     return x
 class GeneratorHead(nn.Module):
-  def __init__(self, vocab_size, dim, embed_dim, layer_norm_eps):
+  def __init__(self, vocab_size, dim, emb_dim, layer_norm_eps=1e-12):
     super().__init__()
     self.vocab_size = vocab_size
 
-    self.dense = nn.Linear(dim, dim)
-    self.activation = F.gelu()
-    self.norm = nn.LayerNorm(embed_dim, eps=layer_norm_eps)
-    self.decoder = nn.Linear(embed_dim, vocab_size, bias=False)
+    self.dense = nn.Linear(dim, emb_dim)
+    self.activation = F.gelu
+    self.norm = nn.LayerNorm(emb_dim, eps=layer_norm_eps)
+    self.decoder = nn.Linear(emb_dim, vocab_size, bias=False)
     self.bias = nn.Parameter(torch.zeros(vocab_size))
 
     # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
@@ -87,10 +89,10 @@ class GeneratorHead(nn.Module):
     return outputs
 
 class DiscriminatorHead(nn.Module):
-  def __init__(self, dim, layer_norm_eps):
+  def __init__(self, dim, layer_norm_eps=1e-12):
     super().__init__()
     self.dense = nn.Linear(dim, dim)
-    self.activation = F.gelu()
+    self.activation = F.gelu
     self.LayerNorm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
@@ -125,27 +127,26 @@ class Electra(nn.Module):
                gen_weight=1.,
                temperature=1.):
     super().__init__()
-
-    self.generator = TransformerEncoderModel(vocab_size=config.vocab_size,
+    # Electra Generator
+    self.generator = TransformerEncoderModel(vocab_size=num_tokens,
                                              max_seq_len=config.max_seq_len,
                                              dim=gen_config.dim,
-                                             embed_dim=gen_config.embed_dim,
+                                             emb_dim=gen_config.emb_dim,
                                              depth=gen_config.depth,
                                              head_num=gen_config.head_num)
-    self.generator_head = GeneratorHead(vocab_size=config.vocab_size,
+    self.generator_head = GeneratorHead(vocab_size=num_tokens,
                                         dim=gen_config.dim,
-                                        embed_dim=gen_config.embed_dim)
-
-    self.discriminator = TransformerEncoderModel(vocab_size=config.vocab_size,
+                                        emb_dim=gen_config.emb_dim)
+    # Electra Discriminator
+    self.discriminator = TransformerEncoderModel(vocab_size=num_tokens,
                                              max_seq_len=config.max_seq_len,
                                              dim=disc_config.dim,
-                                             embed_dim=disc_config.embed_dim,
+                                             emb_dim=disc_config.emb_dim,
                                              depth=disc_config.depth,
                                              head_num=disc_config.head_num)
-    self.discriminator_head = DiscriminatorHead(dim=disc_config.dim,
-                                                embed_dim=disc_config.embed_dim)
+    self.discriminator_head = DiscriminatorHead(dim=disc_config.dim)
 
-    # mlm related probabilities
+    # mlm probabilities
     self.mask_prob = mask_prob
     self.replace_prob = replace_prob
 
@@ -163,6 +164,12 @@ class Electra(nn.Module):
     # loss weights
     self.disc_weight = disc_weight
     self.gen_weight = gen_weight
+
+  def tie_embedding_weight(self):
+    # 4.2 weight tie the token and positional embeddings of generator and discriminator
+    # 제너레이터와 디스크리미네이터의 토큰, 포지션 임베딩을 공유한다(tie).
+    self.generator.token_emb = self.discriminator.token_emb
+    self.generator.position_emb = self.discriminator.position_emb
 
   def forward(self, input, input_mask):
     b, t = input.shape
@@ -199,8 +206,8 @@ class Electra(nn.Module):
     gen_labels = input.masked_fill(~mask, self.pad_token_id)
 
     # get generator output and get mlm loss
-    output = self.generator(input_ids=masked_input, input_mask=input_mask)
-    outupt = self.generator_head(output, masked_lm_labels=gen_labels)
+    gen_output = self.generator(input_ids=masked_input, input_mask=input_mask)
+    logits, mlm_loss = self.generator_head(gen_output, masked_lm_labels=gen_labels)
     # nn.CrossEntropyLoss()(logits[mask_indices].view(-1,22000),gen_labels[mask_indices])
     # 위 함수로 loss를 해도 동일
     # mlm_loss = F.cross_entropy(
@@ -208,10 +215,9 @@ class Electra(nn.Module):
     #   gen_labels,
     #   ignore_index=self.pad_token_id
     # )
-    mlm_loss = output[1] # mlm loss
 
     # use mask from before to select logits that need sampling
-    sample_logits = output[0][mask_indices] #### <- 확인 부분
+    sample_logits = logits[mask_indices]
 
     # sample
     sampled = gumbel_sample(sample_logits, temperature=self.temperature)
@@ -227,13 +233,15 @@ class Electra(nn.Module):
     non_padded_indices = torch.nonzero(input != self.pad_token_id, as_tuple=True)
 
     # get discriminator output and binary cross entropy loss
-    disc_logits = self.discriminator(disc_input, **kwargs)
-    disc_logits = disc_logits.reshape_as(disc_labels)
-
-    disc_loss = F.binary_cross_entropy_with_logits(
-      disc_logits[non_padded_indices],
-      disc_labels[non_padded_indices]
-    )
+    disc_ouput = self.discriminator(input_ids=disc_input,input_mask=input_mask)
+    disc_logits, disc_loss = self.discriminator_head(hidden_states= disc_ouput[non_padded_indices],
+                                         is_replaced_label=disc_labels[non_padded_indices])
+    # disc_logits = disc_logits.reshape_as(disc_labels)
+    #
+    # disc_loss = F.binary_cross_entropy_with_logits(
+    #   disc_logits[non_padded_indices],
+    #   disc_labels[non_padded_indices]
+    # )
 
     # gather metrics
     with torch.no_grad():
