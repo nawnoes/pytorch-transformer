@@ -234,8 +234,7 @@ class Electra(nn.Module):
 
     # get discriminator output and binary cross entropy loss
     disc_ouput = self.discriminator(input_ids=disc_input,input_mask=input_mask)
-    disc_logits, disc_loss = self.discriminator_head(hidden_states= disc_ouput[non_padded_indices],
-                                         is_replaced_label=disc_labels[non_padded_indices])
+    disc_logits, disc_loss = self.discriminator_head(hidden_states= disc_ouput, is_replaced_label=disc_labels)
     # disc_logits = disc_logits.reshape_as(disc_labels)
     #
     # disc_loss = F.binary_cross_entropy_with_logits(

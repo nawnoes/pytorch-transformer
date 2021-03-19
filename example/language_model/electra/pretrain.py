@@ -2,7 +2,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import sys
 sys.path.append('../') # for local
-# sys.path.append('/content/drive/My Drive/Colab Notebooks/transformer') # for colab
+# sys.path.append('/content/drive/My Drive/Colab Notebooks/transformer-electra') # for colab
 
 import torch
 import torch.nn as nn
@@ -252,7 +252,7 @@ def main():
          'weight_decay': 0.0}
     ]
 
-    learning_rate = 2e-3
+    learning_rate = 5e-4
     adam_epsilon = 1e-6
 
     optimizer = AdamW(optimizer_grouped_parameters,
