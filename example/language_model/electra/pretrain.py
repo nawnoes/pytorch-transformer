@@ -128,6 +128,7 @@ class ElectraTrainer(object):
                 global_steps += 1
 
                 if global_steps % gradient_accumulation_steps == 0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     scheduler.step()
                     optimizer.step()
                     self.model.zero_grad()
