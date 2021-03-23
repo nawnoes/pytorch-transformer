@@ -6,6 +6,9 @@ from model.util import clones
 import torch.nn.functional as F
 from model.util import log, gumbel_sample, mask_with_tokens, prob_mask_like, get_mask_subset_with_prob
 from model.transformer import PositionalEmbedding,Encoder
+from transformers.activations import get_activation
+from torch.nn import CrossEntropyLoss
+
 
 Results = namedtuple('Results', [
   'loss',
@@ -253,3 +256,60 @@ class Electra(nn.Module):
     # return weighted sum of losses
     return Results(self.gen_weight * mlm_loss + self.disc_weight * disc_loss, mlm_loss, disc_loss, gen_acc, disc_acc,
                    disc_labels, disc_predictions)
+
+class ElectraMRCHead(nn.Module):
+  def __init__(self, dim, num_labels,hidden_dropout_prob=0.3):
+    super().__init__()
+    self.dense = nn.Linear(dim, 1*dim)
+    self.dropout = nn.Dropout(hidden_dropout_prob)
+    self.out_proj = nn.Linear(1*dim,num_labels)
+
+  def forward(self, x, **kwargs):
+    # x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+    x = self.dropout(x)
+    x = self.dense(x)
+    x = get_activation("gelu")(x)  # although BERT uses tanh here, it seems Electra authors used gelu here
+    x = self.dropout(x)
+    x = self.out_proj(x)
+    return x
+
+class ElectraMRCModel(nn.Module):
+  def __init__(self, electra, dim, num_labels=2, causal=False, dropout_prob=0.2):
+    super().__init__()
+    self.electra = electra
+    self.mrc_head = ElectraMRCHead(dim, num_labels)
+
+  def forward(self,
+              input_ids=None,
+              input_mask=None,
+              start_positions=None,
+              end_positions=None,
+              **kwargs):
+    # 1. reformer의 출력
+    outputs = self.electra(input_ids, input_mask)
+
+    # 2. mrc를 위한
+    logits = self.mrc_head(outputs)
+
+    start_logits, end_logits = logits.split(1, dim=-1)
+    start_logits = start_logits.squeeze(-1)
+    end_logits = end_logits.squeeze(-1)
+
+    if start_positions is not None and end_positions is not None:
+      # If we are on multi-GPU, split add a dimension
+      if len(start_positions.size()) > 1:
+        start_positions = start_positions.squeeze(-1)
+      if len(end_positions.size()) > 1:
+        end_positions = end_positions.squeeze(-1)
+      # sometimes the start/end positions are outside our model inputs, we ignore these terms
+      ignored_index = start_logits.size(1)
+      start_positions.clamp_(0, ignored_index)
+      end_positions.clamp_(0, ignored_index)
+
+      loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+      start_loss = loss_fct(start_logits, start_positions)
+      end_loss = loss_fct(end_logits, end_positions)
+      total_loss = (start_loss + end_loss) / 2
+      return total_loss
+    else:
+      return start_logits, end_logits

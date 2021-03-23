@@ -5,6 +5,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 from model.util import clones
+from transformers.activations import get_activation
 
 """
 self-Attention의 경우 Query Q, Key K, Value V를 입력으로 받아
@@ -271,6 +272,68 @@ class Transformer(nn.Module):
     lm_logits = self.generator(target)
 
     return lm_logits
+class TransformerMRCHead(nn.Module):
+  def __init__(self, dim, num_labels,hidden_dropout_prob=0.3):
+    super().__init__()
+    self.dense = nn.Linear(dim, 1*dim)
+    self.dropout = nn.Dropout(hidden_dropout_prob)
+    self.out_proj = nn.Linear(1*dim,num_labels)
+
+  def forward(self, x, **kwargs):
+    # x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+    x = self.dropout(x)
+    x = self.dense(x)
+    x = get_activation("gelu")(x)  # although BERT uses tanh here, it seems Electra authors used gelu here
+    x = self.dropout(x)
+    x = self.out_proj(x)
+    return x
+
+class TransformerMRCModel(nn.Module):
+  def __init__(self, vocab_size, dim, depth, max_seq_len, head_num, num_labels=2, causal=False, dropout_prob=0.2):
+    super().__init__()
+    self.transformer = TransformerLM(
+      vocab_size=vocab_size,
+      dim=dim,
+      depth=depth,
+      max_seq_len=max_seq_len,
+      head_num=head_num,
+    )
+    self.mrc_head = TransformerMRCHead(dim, num_labels)
+
+  def forward(self,
+              input_ids=None,
+              input_mask=None,
+              start_positions=None,
+              end_positions=None,
+              **kwargs):
+    # 1. transformer의 출력
+    _, outputs = self.transformer(input_ids, input_mask)
+
+    # 2. mrc를 위한
+    logits = self.mrc_head(outputs)
+
+    start_logits, end_logits = logits.split(1, dim=-1)
+    start_logits = start_logits.squeeze(-1)
+    end_logits = end_logits.squeeze(-1)
+
+    if start_positions is not None and end_positions is not None:
+      # If we are on multi-GPU, split add a dimension
+      if len(start_positions.size()) > 1:
+        start_positions = start_positions.squeeze(-1)
+      if len(end_positions.size()) > 1:
+        end_positions = end_positions.squeeze(-1)
+      # sometimes the start/end positions are outside our model inputs, we ignore these terms
+      ignored_index = start_logits.size(1)
+      start_positions.clamp_(0, ignored_index)
+      end_positions.clamp_(0, ignored_index)
+
+      loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+      start_loss = loss_fct(start_logits, start_positions)
+      end_loss = loss_fct(end_logits, end_positions)
+      total_loss = (start_loss + end_loss) / 2
+      return total_loss
+    else:
+      return start_logits, end_logits
 
 class TransformerLM(nn.Module):
   def __init__(self, vocab_size, dim=512,  depth= 12, max_seq_len=512, head_num=8, dropout= 0.1):
@@ -294,6 +357,8 @@ class TransformerLM(nn.Module):
     x = self.norm(x)
 
     return self.lm_head(x), x  # lm_head, performer_embedding
+
+
 
 if __name__=="__main__":
   pass
