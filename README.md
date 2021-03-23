@@ -21,7 +21,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ### Usage
 ```txt
 ① 디렉토리 및 파일 코랩으로 이동 
-② example/language_model/config.json 경로의 학습할 설정 확인 
+② config/mlm 경로의 학습할 설정 확인 
 ③ Pretraining 할 Data와 Vocab 확인 
 ④ train-mlm.ipynb로 Pretraining 
 ⑤ Pretraining 완료 후 korquad-transformer-mlm.ipynb로 Korquad 학습 및 테스트 
@@ -43,20 +43,20 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 
 
 ### 2. ELECTRA
-트랜스포머 인코더 블록을 이용한 ELECTRA Pretraining.
+트랜스포머 인코더 블록을 이용한 ELECTRA Pretraining
 ![](https://t2.daumcdn.net/thumb/R720x0.fpng/?fname=http://t1.daumcdn.net/brunch/service/user/Zvf/image/_twj8fBpj3opipMwC-w7Scv89yM.png)
 
 ### Usage
 ```txt
 ① 디렉토리 및 파일 코랩으로 이동 
-② config/electra경로의 학습하기 위한 json 설정 확인 
+② config/electra 경로의 학습하기 위한 json 설정 확인 
 ③ Pretraining 할 Data와 Vocab 확인 
 ④ train-electra.ipynb에서 electra/run_pretraing.py를 이용해 Pretraining 
 ⑤ Pretraining 완료 후 korquad-transformer-electra.ipynb로 Korquad 학습 및 테스트 
 ```
 
 #### Model Config
-`ELECTRA-small` 모델 텟스트
+`ELECTRA-small` 모델 테스
   
 |                  |               | Layers | Embedding Size | Hidden Size | # heads |
 | :--------------: | ------------: | -----: | -------------: | ----------: | ------: |
