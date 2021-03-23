@@ -42,8 +42,29 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 |  reformer-electra-small  |    52.04    |  78.53  |
 
 
+### 2. ELECTRA
+트랜스포머 인코더 블록을 이용한 ELECTRA Pretraining.
+![](https://t2.daumcdn.net/thumb/R720x0.fpng/?fname=http://t1.daumcdn.net/brunch/service/user/Zvf/image/_twj8fBpj3opipMwC-w7Scv89yM.png)
 
-### 2. Ko-En Translation
+### Usage
+```txt
+① 디렉토리 및 파일 코랩으로 이동 
+② config/electra경로의 학습하기 위한 json 설정 확인 
+③ Pretraining 할 Data와 Vocab 확인 
+④ train-electra.ipynb에서 electra/run_pretraing.py를 이용해 Pretraining 
+⑤ Pretraining 완료 후 korquad-transformer-electra.ipynb로 Korquad 학습 및 테스트 
+```
+
+#### Model Config
+`ELECTRA-small` 모델 텟스트
+  
+|                  |               | Layers | Embedding Size | Hidden Size | # heads |
+| :--------------: | ------------: | -----: | -------------: | ----------: | ------: |
+| `ELECTRA-small`  | Discriminator |     12 |            128 |         256 |      12 |
+|                  |     Generator |     12 |            128 |         256 |       4 |
+
+
+### 3. Ko-En Translation
 AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
 ![](./images/transformer-translation.png)
 #### Data
