@@ -83,7 +83,7 @@ class ElectraTrainer(object):
         # Load Checkpoint
         if os.path.isfile(f'{self.checkpoint_path}/{self.model_name}.pth'):
             checkpoint = torch.load(f'{self.checkpoint_path}/{self.model_name}.pth', map_location=self.device)
-            start_epoch = checkpoint['epoch']
+            # start_epoch = checkpoint['epoch']
             losses = checkpoint['losses']
             global_steps = checkpoint['train_step']
             start_step = global_steps if start_epoch == 0 else global_steps % len(train_dataloader)
@@ -109,8 +109,8 @@ class ElectraTrainer(object):
                       bar_format='{l_bar}{bar:10}{r_bar}'
                       )
             for step, batch in pb:
-                if step < start_step:
-                    continue
+                # if step < start_step:
+                #     continue
                 inputs, input_mask = batch  # _ is input_mask
                 inputs, input_mask = inputs.to(self.device), input_mask.to(self.device)
                 output = self.model(input=inputs, input_mask=input_mask)

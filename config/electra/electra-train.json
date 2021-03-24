@@ -10,6 +10,6 @@
   "batch_size" : 2,
   "epochs" : 30,
   "log_steps" : 2,
-  "ckpt_steps" : 100,
+  "ckpt_steps" : 1000,
   "gradient_accumulation_steps" : 512
 }

@@ -115,7 +115,7 @@ class DatasetElectra(Dataset):
 
     def __getitem__(self, idx):
         inputs = self._tokenize_input_ids(self.docs[idx], pad_to_max_length=True)
-        inputs = self._pad_token(inputs)
+        # inputs = self._pad_token(inputs)
 
         inputs= inputs.squeeze()
         inputs_mask = inputs != 0
