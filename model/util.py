@@ -1,6 +1,7 @@
 from functools import reduce
 
 from torch.nn import ModuleList
+import torch.nn.functional as F
 import copy
 import math
 import torch
@@ -22,8 +23,6 @@ def subsequent_mask(size):
   attn_shape = (1, size, size)
   subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
   return torch.from_numpy(subsequent_mask) == 0
-
-
 
 def log(t, eps=1e-9):
     return torch.log(t + eps)
@@ -58,3 +57,10 @@ def get_mask_subset_with_prob(mask, prob):
     new_mask = torch.zeros((batch, seq_len + 1), device=device)
     new_mask.scatter_(-1, sampled_indices, 1)
     return new_mask[:, 1:].bool()
+
+def temperature_sampling(logits, temperature):
+  if temperature is None or temperature == 0.0:
+    return torch.argmax(logits)
+  probs = F.softmax(logits / temperature)
+  pred_ids = probs.cpu().multinomial(probs.size()[1], replacement=False)
+  return pred_ids

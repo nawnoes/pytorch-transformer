@@ -15,9 +15,9 @@ import os
 import json
 import logging
 from datetime import datetime
-from model.electra import Electra
+from model.electra_v2 import Electra
 from example.language_model.common.arg import ElectraConfig
-from example.language_model.common.dataset import DatasetElectra
+from example.language_model.common.dataset import DatasetForMLM
 
 
 class ElectraTrainer(object):
@@ -61,6 +61,7 @@ class ElectraTrainer(object):
         eval_loader = DataLoader(eval_dataset, batch_size=self.eval_batch_size, shuffle=eval_shuffle)
         logging.info(f'''train_dataloader size: {len(train_loader.dataset)} | shuffle: {train_shuffle}
                          eval_dataloader size: {len(eval_loader.dataset)} | shuffle: {eval_shuffle}''')
+
         return train_loader, eval_loader
 
     def train(self,
@@ -83,7 +84,7 @@ class ElectraTrainer(object):
         # Load Checkpoint
         if os.path.isfile(f'{self.checkpoint_path}/{self.model_name}.pth'):
             checkpoint = torch.load(f'{self.checkpoint_path}/{self.model_name}.pth', map_location=self.device)
-            # start_epoch = checkpoint['epoch']
+            start_epoch = checkpoint['epoch']
             losses = checkpoint['losses']
             global_steps = checkpoint['train_step']
             start_step = global_steps if start_epoch == 0 else global_steps % len(train_dataloader)
@@ -109,11 +110,11 @@ class ElectraTrainer(object):
                       bar_format='{l_bar}{bar:10}{r_bar}'
                       )
             for step, batch in pb:
-                # if step < start_step:
-                #     continue
-                inputs, input_mask = batch  # _ is input_mask
-                inputs, input_mask = inputs.to(self.device), input_mask.to(self.device)
-                output = self.model(input=inputs, input_mask=input_mask)
+                if step < start_step:
+                    continue
+                inputs, input_mask, labels = batch  # _ is input_mask
+                inputs, input_mask, labels = inputs.to(self.device), input_mask.to(self.device), labels.to(self.device)
+                output = self.model(input=inputs, input_mask=input_mask, mlm_label = labels)
 
                 loss = output.loss
                 origin_loss = loss.item()
@@ -215,7 +216,7 @@ def main():
     tokenizer = BertTokenizer(vocab_file=train_config.vocab_path, do_lower_case=False)
 
     # 3. Dataset
-    dataset = DatasetElectra(tokenizer, train_config.max_seq_len, path=train_config.data_path)
+    dataset = DatasetForMLM(tokenizer, train_config.max_seq_len, path=train_config.data_path)
 
     # 4. Electra Model
     model = Electra(
