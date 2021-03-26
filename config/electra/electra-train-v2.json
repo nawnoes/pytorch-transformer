@@ -1,0 +1,15 @@
+{
+  "vocab_path" : "../../../data/vocab-v1.txt",
+  "data_path" :"../../../data/wiki/" ,
+  "checkpoint_path" : "../../../checkpoints",
+  "generator_config_path": "../../../config/electra/generator.json",
+  "discriminator_config_path": "../../../config/electra/discriminator.json",
+  "vocab_size": 20000,
+  "max_seq_len" : 512,
+  "model_name": "transformer-electra-v2",
+  "batch_size" : 2,
+  "epochs" : 30,
+  "log_steps" : 2,
+  "ckpt_steps" : 1000,
+  "gradient_accumulation_steps" : 512
+}

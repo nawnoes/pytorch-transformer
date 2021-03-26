@@ -121,12 +121,6 @@ class Electra(nn.Module):
                gen_config,
                disc_config,
                num_tokens,
-               mask_token_id,
-               pad_token_id,
-               mask_ignore_token_ids,
-               mask_prob=0.15,
-               replace_prob=0.85,
-               random_token_prob=0.,
                disc_weight=50.,
                gen_weight=1.,
                temperature=1.):
@@ -150,6 +144,10 @@ class Electra(nn.Module):
                                              head_num=disc_config.head_num)
     self.discriminator_head = DiscriminatorHead(dim=disc_config.dim)
 
+    self.disc_weight = disc_weight
+    self.gen_weight = gen_weight
+    self.temperature = temperature
+
   def tie_embedding_weight(self):
     # 4.2 weight tie the token and positional embeddings of generator and discriminator
     # 제너레이터와 디스크리미네이터의 토큰, 포지션 임베딩을 공유한다(tie).
@@ -161,18 +159,16 @@ class Electra(nn.Module):
     gen_output = self.generator(input_ids=input_ids, input_mask=input_mask)
     gen_logits, gen_loss = self.generator_head(gen_output, masked_lm_labels=mlm_label)
 
-    # input_ids 복사
-    origin_ids = input_ids.clone()
-    gen_ids = input_ids.clone()
-
-    sample_ids = temperature_sampling(gen_logits, temperature=1.0) # temperature에 따라 id 샘플링
     masked_indice = (mlm_label.long() != -100) # mlm 라벨에서 마스킹된 인덱스 찾기
 
-    origin_ids[masked_indice] = mlm_label[masked_indice]
-    gen_ids[masked_indice] = sample_ids[masked_indice]
-    is_replace_label = (gen_ids.long() != origin_ids.long()).float() # discriminator 라벨 생성
+    sample_logits = gen_logits[masked_indice] # use mask from before to select logits that need sampling
+    sampled = gumbel_sample(sample_logits, temperature=self.temperature) # sample from sample logits
 
-    disc_ouput = self.discriminator(input_ids=gen_ids,input_mask=input_mask)
+    disc_input = input_ids.clone() # copy input_ids
+    disc_input[masked_indice] = sampled.detach() # inject sample ids
+    is_replace_label = (input_ids != disc_input).float().detach() # make is_replace_label
+
+    disc_ouput = self.discriminator(input_ids=disc_input, input_mask=input_mask)
     disc_logits, disc_loss = self.discriminator_head(disc_ouput, is_replaced_label=is_replace_label)
 
     # gather metrics

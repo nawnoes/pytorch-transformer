@@ -114,7 +114,7 @@ class ElectraTrainer(object):
                     continue
                 inputs, input_mask, labels = batch  # _ is input_mask
                 inputs, input_mask, labels = inputs.to(self.device), input_mask.to(self.device), labels.to(self.device)
-                output = self.model(input=inputs, input_mask=input_mask, mlm_label = labels)
+                output = self.model(inputs,input_mask,labels)
 
                 loss = output.loss
                 origin_loss = loss.item()
@@ -135,7 +135,7 @@ class ElectraTrainer(object):
                     self.model.zero_grad()
 
                 if global_steps % log_steps == 0:
-                    pb.set_postfix_str(f'''{datetime.now()} | Train Loss: {step_loss / local_steps} | Steps: {global_steps} | disc_acc: {output.disc_acc} | gen_acc: {output.gen_acc}''')
+                    pb.set_postfix_str(f'''{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Train Loss: {format(step_loss / local_steps,".4f")} | Steps: {global_steps} | disc_acc: {format(output.disc_acc,".4f")} | gen_acc: {format(output.gen_acc,".4f")}''')
                     step_loss = 0.0
                     local_steps = 0
 
@@ -207,7 +207,7 @@ def main():
     # base_path = '/content/drive/My Drive/Colab Notebooks/transformer'
     base_path = '/Users/a60058238/Desktop/dev/workspace/transformers'
     log_dir = f'{base_path}/logs'
-    config_path = f'{base_path}/config/electra/electra-train.json'
+    config_path = f'{base_path}/config/electra/electra-train-v2.json'
 
     # 1. Config
     train_config, gen_config, disc_config = ElectraConfig(config_path=config_path).get_config()
@@ -224,10 +224,6 @@ def main():
         gen_config=gen_config,
         disc_config=disc_config,
         num_tokens=tokenizer.vocab_size,
-        mask_token_id=tokenizer.mask_token_id,          # the token id reserved for masking
-        pad_token_id=tokenizer.pad_token_id,            # the token id for padding
-        mask_prob=0.15,                                 # masking probability for masked language modeling
-        mask_ignore_token_ids=tokenizer.all_special_ids # ids of tokens to ignore for mask modeling ex. (cls, sep)
     )
 
     # weight tie any other embeddings if available, token type embeddings, etc.
