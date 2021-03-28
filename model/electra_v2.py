@@ -154,7 +154,7 @@ class Electra(nn.Module):
     self.generator.token_emb = self.discriminator.token_emb
     self.generator.position_emb = self.discriminator.position_emb
 
-  def forward(self, input_ids, input_mask, mlm_label):
+  def forward(self, input_ids, input_mask, mlm_label=None):
 
     gen_output = self.generator(input_ids=input_ids, input_mask=input_mask)
     gen_logits, gen_loss = self.generator_head(gen_output, masked_lm_labels=mlm_label)
