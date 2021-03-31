@@ -99,7 +99,7 @@ class DiscriminatorHead(nn.Module):
     self.LayerNorm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
-  def forward(self, hidden_states,is_replaced_label = None):
+  def forward(self, hidden_states,is_replaced_label = None, input_mask=None):
     hidden_states = self.dense(hidden_states)
     hidden_states = self.activation(hidden_states)
     hidden_states = self.LayerNorm(hidden_states)
@@ -109,7 +109,14 @@ class DiscriminatorHead(nn.Module):
 
     if is_replaced_label is not None:
       loss_fct = nn.BCEWithLogitsLoss()
-      disc_loss = loss_fct(logits.view(-1), is_replaced_label.view(-1))
+
+      if input_mask is not None:
+        active_loss = input_mask.view(-1, hidden_states.shape[1])==1
+        active_logits = logits.view(-1, hidden_states.shape[1])[active_loss]
+        active_labels = is_replaced_label[active_loss]
+        disc_loss = loss_fct(active_logits, active_labels.float())
+      else:
+        disc_loss = loss_fct(logits.view(-1, hidden_states.shape[1]), is_replaced_label.float())
 
       outputs += (disc_loss, )
 
@@ -169,7 +176,7 @@ class Electra(nn.Module):
     is_replace_label = (input_ids != disc_input).float().detach() # make is_replace_label
 
     disc_ouput = self.discriminator(input_ids=disc_input, input_mask=input_mask)
-    disc_logits, disc_loss = self.discriminator_head(disc_ouput, is_replaced_label=is_replace_label)
+    disc_logits, disc_loss = self.discriminator_head(disc_ouput, is_replaced_label=is_replace_label, input_mask=input_mask)
 
     # gather metrics
     with torch.no_grad():
@@ -177,7 +184,7 @@ class Electra(nn.Module):
       disc_predictions = torch.round((torch.sign(disc_logits) + 1.0) * 0.5)
       gen_acc = (mlm_label[masked_indice] == gen_predictions[masked_indice]).float().mean()
       disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
-
+      # disc_acc = (is_replace_label == disc_predictions.squeeze()).float().mean()
     # return weighted sum of losses
     return Results(self.gen_weight * gen_loss + self.disc_weight * disc_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions)
 

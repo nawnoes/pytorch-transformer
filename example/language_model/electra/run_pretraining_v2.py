@@ -228,7 +228,7 @@ def main():
 
     # weight tie any other embeddings if available, token type embeddings, etc.
     model.tie_embedding_weight()
-    model.cuda()
+    # model.cuda()
 
     # 5. Pretraining Traniner
     trainer = ElectraTrainer(dataset, model, tokenizer,
