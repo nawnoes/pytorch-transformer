@@ -96,13 +96,13 @@ class DiscriminatorHead(nn.Module):
     super().__init__()
     self.dense = nn.Linear(dim, dim)
     self.activation = F.gelu
-    self.LayerNorm = nn.LayerNorm(dim, eps=layer_norm_eps)
+    self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
   def forward(self, hidden_states,is_replaced_label = None, input_mask=None):
     hidden_states = self.dense(hidden_states)
     hidden_states = self.activation(hidden_states)
-    hidden_states = self.LayerNorm(hidden_states)
+    hidden_states = self.norm(hidden_states)
     logits = self.classifier(hidden_states)
 
     outputs = (logits,)
@@ -149,6 +149,7 @@ class Electra(nn.Module):
                                              emb_dim=disc_config.emb_dim,
                                              depth=disc_config.depth,
                                              head_num=disc_config.head_num)
+
     self.discriminator_head = DiscriminatorHead(dim=disc_config.dim)
 
     self.disc_weight = disc_weight
@@ -183,8 +184,9 @@ class Electra(nn.Module):
       gen_predictions = torch.argmax(gen_logits, dim=-1)
       disc_predictions = torch.round((torch.sign(disc_logits) + 1.0) * 0.5)
       gen_acc = (mlm_label[masked_indice] == gen_predictions[masked_indice]).float().mean()
-      disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
-      # disc_acc = (is_replace_label == disc_predictions.squeeze()).float().mean()
+      # disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
+      active_loss = input_mask.view(-1, disc_logits.shape[1]) == 1
+      disc_acc = (is_replace_label[active_loss] == disc_predictions[active_loss]).float().mean()
     # return weighted sum of losses
     return Results(self.gen_weight * gen_loss + self.disc_weight * disc_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions)
 
