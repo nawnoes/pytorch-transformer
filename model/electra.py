@@ -87,8 +87,7 @@ class GeneratorHead(nn.Module):
 
     if masked_lm_labels is not None:
       loss_fct = nn.CrossEntropyLoss(ignore_index=0)
-      genenater_loss = loss_fct(logits.view(-1, self.vocab_size),
-                                masked_lm_labels.view(-1))
+      genenater_loss = loss_fct(logits.view(-1, self.vocab_size), masked_lm_labels.view(-1))
       # genenater_loss = F.cross_entropy(
       #       logits.transpose(1, 2),
       #       masked_lm_labels,
@@ -102,13 +101,13 @@ class DiscriminatorHead(nn.Module):
     super().__init__()
     self.dense = nn.Linear(dim, dim)
     self.activation = F.gelu
-    self.LayerNorm = nn.LayerNorm(dim, eps=layer_norm_eps)
+    self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
   def forward(self, hidden_states,is_replaced_label = None, non_padded_indices=None):
     hidden_states = self.dense(hidden_states)
     hidden_states = self.activation(hidden_states)
-    hidden_states = self.LayerNorm(hidden_states)
+    hidden_states = self.norm(hidden_states)
     logits = self.classifier(hidden_states)
 
     outputs = (logits,)
@@ -117,8 +116,7 @@ class DiscriminatorHead(nn.Module):
       # loss_fct = nn.BCEWithLogitsLoss()
       # discriminator_loss = loss_fct(logits.view(-1), is_replaced_label.view(-1))
 
-      if len(logits.shape) == 3:
-        logits = logits.squeeze(dim=-1)
+      logits.reshape_as(is_replaced_label)
 
       disc_loss = F.binary_cross_entropy_with_logits(
         logits[non_padded_indices],
