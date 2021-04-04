@@ -95,14 +95,14 @@ class DiscriminatorHead(nn.Module):
   def __init__(self, dim, layer_norm_eps=1e-12):
     super().__init__()
     self.dense = nn.Linear(dim, dim)
-    self.activation = F.gelu
-    self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
+    # self.activation = F.gelu
+    # self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
   def forward(self, hidden_states,is_replaced_label = None, input_mask=None):
     hidden_states = self.dense(hidden_states)
-    hidden_states = self.activation(hidden_states)
-    hidden_states = self.norm(hidden_states)
+    # hidden_states = self.activation(hidden_states)
+    # hidden_states = self.norm(hidden_states)
     logits = self.classifier(hidden_states)
 
     outputs = (logits,)
@@ -188,7 +188,8 @@ class Electra(nn.Module):
       active_loss = input_mask.view(-1, disc_logits.shape[1]) == 1
       disc_acc = (is_replace_label[active_loss] == disc_predictions[active_loss]).float().mean()
     # return weighted sum of losses
-    return Results(self.gen_weight * gen_loss + self.disc_weight * disc_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions)
+    total_loss = self.gen_weight * gen_loss + self.disc_weight * disc_loss
+    return total_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions
 
 class ElectraMRCHead(nn.Module):
   def __init__(self, dim, num_labels,hidden_dropout_prob=0.3):
