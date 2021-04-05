@@ -46,7 +46,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 트랜스포머 인코더 블록을 이용한 ELECTRA Pretraining
 ![](https://t2.daumcdn.net/thumb/R720x0.fpng/?fname=http://t1.daumcdn.net/brunch/service/user/Zvf/image/_twj8fBpj3opipMwC-w7Scv89yM.png)
 
-### Usage
+#### Usage
 ```txt
 ① 디렉토리 및 파일 코랩으로 이동 
 ② config/electra 경로의 학습하기 위한 json 설정 확인 
@@ -62,6 +62,13 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 | :--------------: | ------------: | -----: | -------------: | ----------: | ------: |
 | `ELECTRA-small`  | Discriminator |     12 |            128 |         256 |      12 |
 |                  |     Generator |     12 |            128 |         256 |       4 |
+
+#### Training
+##### ① Warm up
+- torch.optim.lr_scheduler.StepLR: Generator가 충분히 수렴하지 못하는 경향.
+- torch.optim.lr_scheduler.OneCycleLR: `5e-3` 까지 Warm up 후 learning rate 떨어지도록 학습
+
+##### ② Amp
 
 
 ### 3. Ko-En Translation
