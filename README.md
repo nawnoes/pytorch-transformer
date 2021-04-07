@@ -56,7 +56,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ```
 
 #### Model Config
-`ELECTRA-small` 모델 테스
+`ELECTRA-small` 모델 테스트
   
 |                  |               | Layers | Embedding Size | Hidden Size | # heads |
 | :--------------: | ------------: | -----: | -------------: | ----------: | ------: |
@@ -66,7 +66,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 #### Training
 ##### ① Warm up
 - torch.optim.lr_scheduler.StepLR: Generator가 충분히 수렴하지 못하는 경향.
-- torch.optim.lr_scheduler.OneCycleLR: `5e-3` 까지 Warm up 후 learning rate 떨어지도록 학습
+- torch.optim.lr_scheduler.OneCycleLR: `5e-3` 까지 Warm up 후 learning rate 떨어지도록 학습. `5e-2` 동작 X
 
 ##### ② Amp
 
