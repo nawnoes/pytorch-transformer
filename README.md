@@ -69,7 +69,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 - torch.optim.lr_scheduler.OneCycleLR: `5e-3` 까지 Warm up 후 learning rate 떨어지도록 학습. `5e-2` 동작 X
 
 ##### ② Amp
-
+mixed precision을 사용해 학습 및 배치 사이즈 증가.  
 
 ### 3. Ko-En Translation
 AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
