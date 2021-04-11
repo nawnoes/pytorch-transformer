@@ -182,20 +182,19 @@ class Electra(nn.Module):
     # gather metrics
     with torch.no_grad():
       gen_predictions = torch.argmax(gen_logits, dim=-1)
-      disc_predictions = (disc_logits.sigmoid() >= 0.5) #torch.round((torch.sign(disc_logits) + 1.0) * 0.5)
+      disc_predictions = torch.round((torch.sign(disc_logits) + 1.0) * 0.5)
       gen_acc = (mlm_label[masked_indice] == gen_predictions[masked_indice]).float().mean()
-      # disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
-      active_loss = input_mask.view(-1, disc_logits.shape[1]) == 1
-      disc_acc = (is_replace_label[active_loss] == disc_predictions[active_loss]).float().mean()
+      disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
+
     # return weighted sum of losses
     total_loss = self.gen_weight * gen_loss + self.disc_weight * disc_loss
     return total_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions
 
 class ElectraMRCHead(nn.Module):
-  def __init__(self, dim, num_labels,hidden_dropout_prob=0.3):
+  def __init__(self, dim, num_labels,dropout_prob):
     super().__init__()
     self.dense = nn.Linear(dim, 1*dim)
-    self.dropout = nn.Dropout(hidden_dropout_prob)
+    self.dropout = nn.Dropout(dropout_prob)
     self.out_proj = nn.Linear(1*dim,num_labels)
 
   def forward(self, x):
@@ -209,10 +208,10 @@ class ElectraMRCHead(nn.Module):
     return x
 
 class ElectraMRCModel(nn.Module):
-  def __init__(self, electra, dim, num_labels=2, causal=False, dropout_prob=0.2):
+  def __init__(self, electra, dim, num_labels=2, dropout_prob=0.3):
     super().__init__()
     self.electra = electra
-    self.mrc_head = ElectraMRCHead(dim, num_labels)
+    self.mrc_head = ElectraMRCHead(dim, num_labels, dropout_prob)
 
   def forward(self,
               input_ids=None,
@@ -220,10 +219,10 @@ class ElectraMRCModel(nn.Module):
               start_positions=None,
               end_positions=None):
 
-    # 1. electra 출력
+    # 1. electra
     outputs = self.electra(input_ids, input_mask)
 
-    # 2. mrc를 위한
+    # 2. mrc head
     logits = self.mrc_head(outputs)
 
     start_logits, end_logits = logits.split(1, dim=-1)
@@ -248,6 +247,5 @@ class ElectraMRCModel(nn.Module):
       end_loss = loss_fct(end_logits, end_positions)
       total_loss = (start_loss + end_loss) / 2
       return total_loss
-
     else:
       return start_logits, end_logits
