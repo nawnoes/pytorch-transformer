@@ -12,7 +12,7 @@ model
  ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
 example
  ㄴ language_model    ﹒﹒﹒ 언어모델 예제
- ㄴ translation       ﹒﹒﹒ 번역 예제
+ ㄴ translation       ﹒﹒﹒ 번역 예
 ```
 
 ## Example
@@ -37,7 +37,9 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ```
 #### KorQuAD 1.0 
 - epoch: 5
+
 ![](./images/transformer-mlm-korquad-result-83.png)
+
 |            model         | exact_match | f1 score|
 |:-------------------------|-------------|---------|
 |           KoBERT         |    51.75    |  79.15  |
@@ -75,7 +77,9 @@ mixed precision을 사용해 학습 및 배치 사이즈 증가.
 
 #### KorQuAD 1.0 
 - epoch: 5
+
 ![](./images/transformer-electra-korquad-result-82.png)
+
 |             model           | exact_match | f1 score|
 |:----------------------------|-------------|---------|
 |             KoBERT          |    51.75    |  79.15  |
