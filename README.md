@@ -73,11 +73,11 @@ mixed precision을 사용해 학습 및 배치 사이즈 증가.
 
 #### KorQuAD 1.0 
 ##### ① epoch: 5
-![](./images/transformer-electra-korquad-result.png)
+![](./images/transformer-electra-korquad-result-82.png)
 |             model           | exact_match | f1 score|
 |:----------------------------|-------------|---------|
 |             KoBERT          |    51.75    |  79.15  |
-|**transformer-electra-small**|  **53.20**  |**79.92**|
+|**transformer-electra-small**|  **55.83**  |**82.02**|
 
 ### 3. Ko-En Translation
 AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
