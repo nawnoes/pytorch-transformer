@@ -6,11 +6,13 @@
 
 ```text
 model
- ㄴ transformer.py    ﹒﹒﹒ 트랜스포머 모델
+ ㄴ transformer.py    ﹒﹒﹒ Transformer 모델
+ ㄴ electra.py        ﹒﹒﹒ ELECTRA 모델
  ㄴ util.py           ﹒﹒﹒ 모델에 사용되는 유틸
  ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
-train_translation.py﹒﹒﹒ 한국어-영어 번역 학습
-run_translation.py  ﹒﹒﹒ 한국어-영어 번역 테스트
+example
+ ㄴ language_model    ﹒﹒﹒ 언어모델 예제
+ ㄴ translation       ﹒﹒﹒ 번역 예제
 ```
 
 ## Example
@@ -33,7 +35,8 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
   "n_head": 8,
   "max_seq_len" : 512,
 ```
-##### ① epoch: 5
+#### KorQuAD 1.0 
+- epoch: 5
 ![](./images/transformer-mlm-korquad-result-83.png)
 |            model         | exact_match | f1 score|
 |:-------------------------|-------------|---------|
@@ -71,7 +74,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 mixed precision을 사용해 학습 및 배치 사이즈 증가.  
 
 #### KorQuAD 1.0 
-##### ① epoch: 5
+- epoch: 5
 ![](./images/transformer-electra-korquad-result-82.png)
 |             model           | exact_match | f1 score|
 |:----------------------------|-------------|---------|
