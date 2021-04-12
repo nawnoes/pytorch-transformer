@@ -33,13 +33,12 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
   "n_head": 8,
   "max_seq_len" : 512,
 ```
-#### KorQuAD 1.0 Result
+##### ① epoch: 5
+![](./images/transformer-mlm-korquad-result-83.png)
 |            model         | exact_match | f1 score|
 |:-------------------------|-------------|---------|
 |           KoBERT         |    51.75    |  79.15  |
 |**transformer-bert-small**|  **56.47**  |**83.04**|
-|    reformer-bert-small   |    52.1     |  79.02  |
-|  reformer-electra-small  |    52.04    |  78.53  |
 
 
 ### 2. ELECTRA
