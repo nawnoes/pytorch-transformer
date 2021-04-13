@@ -1,5 +1,5 @@
 # Pytorch Transformer
-직접 구현한 pytorch 트랜스포머를 이용한 언어모델(BERT MLM, ELECTRA)과 기계번역 테스트. 
+Pytorch 트랜스포머를 이용한 언어모델(BERT MLM, ELECTRA)과 기계번역 테스트. 
 
 ## Model
 ![](./images/transformer_model.png)
