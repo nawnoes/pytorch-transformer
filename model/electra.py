@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import torch
 from torch import nn
-from model.util import clones
+from model.util import clones, temperature_sampling
 import torch.nn.functional as F
 from model.util import log, gumbel_sample, mask_with_tokens, prob_mask_like, get_mask_subset_with_prob
 from model.transformer import PositionalEmbedding,Encoder
@@ -86,13 +86,8 @@ class GeneratorHead(nn.Module):
     outputs = (logits,)
 
     if masked_lm_labels is not None:
-      loss_fct = nn.CrossEntropyLoss(ignore_index=0)
+      loss_fct = nn.CrossEntropyLoss()
       genenater_loss = loss_fct(logits.view(-1, self.vocab_size), masked_lm_labels.view(-1))
-      # genenater_loss = F.cross_entropy(
-      #       logits.transpose(1, 2),
-      #       masked_lm_labels,
-      #       ignore_index = 0
-      #   )
       outputs += (genenater_loss,)
     return outputs
 
@@ -100,30 +95,29 @@ class DiscriminatorHead(nn.Module):
   def __init__(self, dim, layer_norm_eps=1e-12):
     super().__init__()
     self.dense = nn.Linear(dim, dim)
-    self.activation = F.gelu
-    self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
+    # self.activation = F.gelu
+    # self.norm = nn.LayerNorm(dim, eps=layer_norm_eps)
     self.classifier = nn.Linear(dim, 1)
 
-  def forward(self, hidden_states,is_replaced_label = None, non_padded_indices=None):
+  def forward(self, hidden_states,is_replaced_label = None, input_mask=None):
     hidden_states = self.dense(hidden_states)
-    hidden_states = self.activation(hidden_states)
-    hidden_states = self.norm(hidden_states)
+    # hidden_states = self.activation(hidden_states)
+    # hidden_states = self.norm(hidden_states)
     logits = self.classifier(hidden_states)
 
     outputs = (logits,)
 
     if is_replaced_label is not None:
-      # loss_fct = nn.BCEWithLogitsLoss()
-      # discriminator_loss = loss_fct(logits.view(-1), is_replaced_label.view(-1))
+      loss_fct = nn.BCEWithLogitsLoss()
 
-      logits.reshape_as(is_replaced_label)
+      if input_mask is not None:
+        active_loss = input_mask.view(-1, hidden_states.shape[1])==1
+        active_logits = logits.view(-1, hidden_states.shape[1])[active_loss]
+        active_labels = is_replaced_label[active_loss]
+        disc_loss = loss_fct(active_logits, active_labels.float())
+      else:
+        disc_loss = loss_fct(logits.view(-1, hidden_states.shape[1]), is_replaced_label.float())
 
-      disc_loss = F.binary_cross_entropy_with_logits(
-        logits[non_padded_indices],
-        is_replaced_label[non_padded_indices]
-      )
-
-      # print(f'discriminator_loss{discriminator_loss}  , disc_loss==discriminator_loss: {disc_loss==discriminator_loss}')
       outputs += (disc_loss, )
 
     return outputs
@@ -134,12 +128,6 @@ class Electra(nn.Module):
                gen_config,
                disc_config,
                num_tokens,
-               mask_token_id,
-               pad_token_id,
-               mask_ignore_token_ids,
-               mask_prob=0.15,
-               replace_prob=0.85,
-               random_token_prob=0.,
                disc_weight=50.,
                gen_weight=1.,
                temperature=1.):
@@ -161,26 +149,12 @@ class Electra(nn.Module):
                                              emb_dim=disc_config.emb_dim,
                                              depth=disc_config.depth,
                                              head_num=disc_config.head_num)
+
     self.discriminator_head = DiscriminatorHead(dim=disc_config.dim)
 
-    # mlm probabilities
-    self.mask_prob = mask_prob
-    self.replace_prob = replace_prob
-
-    self.num_tokens = num_tokens
-    self.random_token_prob = random_token_prob
-
-    # token ids
-    self.pad_token_id = pad_token_id
-    self.mask_token_id = mask_token_id
-    self.mask_ignore_token_ids = set([*mask_ignore_token_ids, pad_token_id])
-
-    # sampling temperature
-    self.temperature = temperature
-
-    # loss weights
     self.disc_weight = disc_weight
     self.gen_weight = gen_weight
+    self.temperature = temperature
 
   def tie_embedding_weight(self):
     # 4.2 weight tie the token and positional embeddings of generator and discriminator
@@ -188,81 +162,39 @@ class Electra(nn.Module):
     self.generator.token_emb = self.discriminator.token_emb
     self.generator.position_emb = self.discriminator.position_emb
 
-  def forward(self, input, input_mask):
-    b, t = input.shape
+  def forward(self, input_ids, input_mask, mlm_label=None):
 
-    replace_prob = prob_mask_like(input, self.replace_prob)
+    gen_output = self.generator(input_ids=input_ids, input_mask=input_mask)
+    gen_logits, gen_loss = self.generator_head(gen_output, masked_lm_labels=mlm_label)
 
-    # do not mask [pad] tokens, or any other tokens in the tokens designated to be excluded ([cls], [sep])
-    # also do not include these special tokens in the tokens chosen at random
-    no_mask = mask_with_tokens(input, self.mask_ignore_token_ids)
-    mask = get_mask_subset_with_prob(~no_mask, self.mask_prob)
+    masked_indice = (mlm_label.long() != -100) # mlm 라벨에서 마스킹된 인덱스 찾기
 
-    # get mask indices
-    # 마스크의 인덱스를 가져옴
-    mask_indices = torch.nonzero(mask, as_tuple=True)
+    sample_logits = gen_logits[masked_indice] # use mask from before to select logits that need sampling
+    sampled = gumbel_sample(sample_logits, temperature=self.temperature) # sample from sample logits
 
-    # mask input with mask tokens with probability of `replace_prob` (keep tokens the same with probability 1 - replace_prob)
-    masked_input = input.clone().detach()
+    disc_input = input_ids.clone() # copy input_ids
+    disc_input[masked_indice] = sampled.detach() # inject sample ids
+    is_replace_label = (input_ids != disc_input).float().detach() # make is_replace_label
 
-    # if random token probability > 0 for mlm
-    if self.random_token_prob > 0:
-      assert self.num_tokens is not None, 'Number of tokens (num_tokens) must be passed to Electra for randomizing tokens during masked language modeling'
-
-      random_token_prob = prob_mask_like(input, self.random_token_prob)
-      random_tokens = torch.randint(0, self.num_tokens, input.shape, device=input.device)
-      random_no_mask = mask_with_tokens(random_tokens, self.mask_ignore_token_ids)
-      random_token_prob &= ~random_no_mask
-      random_indices = torch.nonzero(random_token_prob, as_tuple=True)
-      masked_input[random_indices] = random_tokens[random_indices]
-
-    # [mask] input
-    masked_input = masked_input.masked_fill(mask * replace_prob, self.mask_token_id)
-
-    # set inverse of mask to padding tokens for labels
-    gen_labels = input.masked_fill(~mask, self.pad_token_id)
-
-    # get generator output and get mlm loss
-    gen_output = self.generator(input_ids=masked_input, input_mask=input_mask)
-    logits, mlm_loss = self.generator_head(gen_output, masked_lm_labels=gen_labels)
-
-    # use mask from before to select logits that need sampling
-    sample_logits = logits[mask_indices]
-
-    # sample
-    sampled = gumbel_sample(sample_logits, temperature=self.temperature)
-
-    # scatter the sampled values back to the input
-    disc_input = input.clone()
-    disc_input[mask_indices] = sampled.detach()
-
-    # generate discriminator labels, with replaced as True and original as False
-    disc_labels = (input != disc_input).float().detach()
-
-    # get discriminator predictions of replaced / original
-    non_padded_indices = torch.nonzero(input != self.pad_token_id, as_tuple=True)
-
-    # get discriminator output and binary cross entropy loss
-    disc_ouput = self.discriminator(input_ids=disc_input,input_mask=input_mask)
-    disc_logits, disc_loss = self.discriminator_head(disc_ouput, is_replaced_label=disc_labels, non_padded_indices=non_padded_indices)
-
+    disc_ouput = self.discriminator(input_ids=disc_input, input_mask=input_mask)
+    disc_logits, disc_loss = self.discriminator_head(disc_ouput, is_replaced_label=is_replace_label, input_mask=input_mask)
 
     # gather metrics
     with torch.no_grad():
-      gen_predictions = torch.argmax(logits, dim=-1)
+      gen_predictions = torch.argmax(gen_logits, dim=-1)
       disc_predictions = torch.round((torch.sign(disc_logits) + 1.0) * 0.5)
-      gen_acc = (gen_labels[mask] == gen_predictions[mask]).float().mean()
-      disc_acc = 0.5 * (disc_labels[mask] == disc_predictions[mask]).float().mean() + 0.5 * (disc_labels[~mask] == disc_predictions[~mask]).float().mean()
+      gen_acc = (mlm_label[masked_indice] == gen_predictions[masked_indice]).float().mean()
+      disc_acc = 0.5 * (is_replace_label[masked_indice] == disc_predictions[masked_indice]).float().mean() + 0.5 * (is_replace_label[~masked_indice] == disc_predictions[~masked_indice]).float().mean()
 
     # return weighted sum of losses
-    return Results(self.gen_weight * mlm_loss + self.disc_weight * disc_loss, mlm_loss, disc_loss, gen_acc, disc_acc,
-                   disc_labels, disc_predictions)
+    total_loss = self.gen_weight * gen_loss + self.disc_weight * disc_loss
+    return total_loss, gen_loss, disc_loss, gen_acc, disc_acc, is_replace_label, disc_predictions
 
 class ElectraMRCHead(nn.Module):
-  def __init__(self, dim, num_labels,hidden_dropout_prob=0.3):
+  def __init__(self, dim, num_labels,dropout_prob):
     super().__init__()
     self.dense = nn.Linear(dim, 1*dim)
-    self.dropout = nn.Dropout(hidden_dropout_prob)
+    self.dropout = nn.Dropout(dropout_prob)
     self.out_proj = nn.Linear(1*dim,num_labels)
 
   def forward(self, x):
@@ -276,10 +208,10 @@ class ElectraMRCHead(nn.Module):
     return x
 
 class ElectraMRCModel(nn.Module):
-  def __init__(self, electra, dim, num_labels=2, causal=False, dropout_prob=0.2):
+  def __init__(self, electra, dim, num_labels=2, dropout_prob=0.3):
     super().__init__()
     self.electra = electra
-    self.mrc_head = ElectraMRCHead(dim, num_labels)
+    self.mrc_head = ElectraMRCHead(dim, num_labels, dropout_prob)
 
   def forward(self,
               input_ids=None,
@@ -287,10 +219,10 @@ class ElectraMRCModel(nn.Module):
               start_positions=None,
               end_positions=None):
 
-    # 1. electra 출력
+    # 1. electra
     outputs = self.electra(input_ids, input_mask)
 
-    # 2. mrc를 위한
+    # 2. mrc head
     logits = self.mrc_head(outputs)
 
     start_logits, end_logits = logits.split(1, dim=-1)
@@ -315,6 +247,5 @@ class ElectraMRCModel(nn.Module):
       end_loss = loss_fct(end_logits, end_positions)
       total_loss = (start_loss + end_loss) / 2
       return total_loss
-
     else:
       return start_logits, end_logits

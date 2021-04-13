@@ -19,7 +19,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from model.electra_v2 import Electra
+from model.electra import Electra
 from example.language_model.common.arg import ElectraConfig
 from example.language_model.common.dataset import DatasetForMLM
 
