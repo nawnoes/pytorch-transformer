@@ -12,7 +12,7 @@ model
  ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
 example
  ㄴ language_model    ﹒﹒﹒ 언어모델 예제
- ㄴ translation       ﹒﹒﹒ 번역 예
+ ㄴ translation       ﹒﹒﹒ 번역 예제
 ```
 
 ## 1. Masked Language Model(ex. BERT)
@@ -172,3 +172,4 @@ ko: 가난뱅이인 제가 당신을 어떻게 사랑할 수 있습니까? en: H
 - https://tutorials.pytorch.kr/beginner/transformer_tutorial.html
 - https://github.com/lonePatient/electra_pytorch
 - https://github.com/lucidrains/electra-pytorch
+- https://github.com/enlipleai/korquad-challenge
