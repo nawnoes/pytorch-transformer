@@ -8,7 +8,7 @@ sys.path.append('/content/drive/My Drive/Colab Notebooks/transformer')
 import torch
 from model.transformer import Transformer
 from transformers import BertTokenizer
-from dataset import TranslationDataset
+from example.translation.dataset import TranslationDataset
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 import math
