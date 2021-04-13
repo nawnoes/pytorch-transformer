@@ -1,5 +1,5 @@
-# Transformer
-파이토치를 이용한 트랜스포머 구현 및 언어모델과 기계번역 테스트. 
+# Pytorch Transformer
+직접 구현한 pytorch 트랜스포머를 이용한 언어모델(BERT MLM, ELECTRA)과 기계번역 테스트. 
 
 ## Model
 ![](./images/transformer_model.png)
@@ -12,7 +12,7 @@ model
  ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
 example
  ㄴ language_model    ﹒﹒﹒ 언어모델 예제
- ㄴ translation       ﹒﹒﹒ 번역 예
+ ㄴ translation       ﹒﹒﹒ 번역 예제
 ```
 
 ## Example
@@ -171,3 +171,5 @@ ko: 가난뱅이인 제가 당신을 어떻게 사랑할 수 있습니까? en: H
 ## References
 - http://nlp.seas.harvard.edu/2018/04/03/attention
 - https://tutorials.pytorch.kr/beginner/transformer_tutorial.html
+- https://github.com/lonePatient/electra_pytorch
+- https://github.com/lucidrains/electra-pytorch

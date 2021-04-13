@@ -1,0 +1,6 @@
+{
+    "emb_dim":128,
+    "dim":128,
+    "head_num":2,
+    "depth":12
+}

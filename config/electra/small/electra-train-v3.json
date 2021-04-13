@@ -1,0 +1,15 @@
+{
+  "vocab_path" : "/content/drive/My Drive/Colab Notebooks/transformer-electra/data/vocab-v1.txt",
+  "data_path" :"/content/drive/My Drive/Colab Notebooks/transformer-electra/data/wiki/" ,
+  "checkpoint_path" : "/content/drive/My Drive/Colab Notebooks/transformer-electra/checkpoints",
+  "generator_config_path": "/content/drive/My Drive/Colab Notebooks/transformer-electra/config/electra/small/generator.json",
+  "discriminator_config_path": "/content/drive/My Drive/Colab Notebooks/transformer-electra/config/electra/small/discriminator.json",
+  "vocab_size": 20000,
+  "max_seq_len" : 512,
+  "model_name": "transformer-electra-small-v4",
+  "batch_size" : 8,
+  "epochs" : 40,
+  "log_steps" : 2,
+  "ckpt_steps" : 500,
+  "gradient_accumulation_steps" : 16
+}
