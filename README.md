@@ -12,7 +12,7 @@ model
  ㄴ visualization.py  ﹒﹒﹒ 모델의 각 부분 시각화
 example
  ㄴ language_model    ﹒﹒﹒ 언어모델 예제
- ㄴ translation       ﹒﹒﹒ 번역 예제
+ ㄴ translation       ﹒﹒﹒ 번역 예
 ```
 
 ## Example
