@@ -15,12 +15,11 @@ example
  ㄴ translation       ﹒﹒﹒ 번역 예
 ```
 
-## Example
-### 1. Masked Language Model(ex. BERT)
+## 1. Masked Language Model(ex. BERT)
 BERT에서 사용한 MLM을 이용한 언어모델 Pretraining 
 ![](./images/masked_language_model.png)
 
-### Usage
+## Usage
 ```txt
 ① 디렉토리 및 파일 코랩으로 이동 
 ② config/mlm 경로의 학습할 설정 확인 
@@ -28,14 +27,14 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ④ train-mlm.ipynb로 Pretraining 
 ⑤ Pretraining 완료 후 korquad-transformer-mlm.ipynb로 Korquad 학습 및 테스트 
 ```
-#### Model Config
+### Model Config
 ```
   "dim": 512,
   "depth": 6,
   "n_head": 8,
   "max_seq_len" : 512,
 ```
-#### KorQuAD 1.0 
+### KorQuAD 1.0 
 - epoch: 5
 
 ![](./images/transformer-mlm-korquad-result-83.png)
@@ -46,11 +45,11 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 |**transformer-bert-small**|  **56.47**  |**83.04**|
 
 
-### 2. ELECTRA
+## 2. ELECTRA
 트랜스포머 인코더 블록을 이용한 ELECTRA Pretraining
 ![](https://t2.daumcdn.net/thumb/R720x0.fpng/?fname=http://t1.daumcdn.net/brunch/service/user/Zvf/image/_twj8fBpj3opipMwC-w7Scv89yM.png)
 
-#### Usage
+### Usage
 ```txt
 ① 디렉토리 및 파일 코랩으로 이동 
 ② config/electra 경로의 학습하기 위한 json 설정 확인 
@@ -59,7 +58,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 ⑤ Pretraining 완료 후 korquad-transformer-electra.ipynb로 Korquad 학습 및 테스트 
 ```
 
-#### Model Config
+### Model Config
 `ELECTRA-small` 모델 테스트
   
 |                  |               | Layers | Embedding Size | Hidden Size | # heads |
@@ -67,15 +66,15 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 | `ELECTRA-small`  | Discriminator |     12 |            128 |         256 |      12 |
 |                  |     Generator |     12 |            128 |         256 |       4 |
 
-#### Training
-##### ① Warm up
+### Training
+#### ① Warm up
 - torch.optim.lr_scheduler.StepLR: Generator가 충분히 수렴하지 못하는 경향.
 - torch.optim.lr_scheduler.OneCycleLR: `5e-3` 까지 Warm up 후 learning rate 떨어지도록 학습. `5e-2` 동작 X
 
-##### ② Amp
+#### ② Amp
 mixed precision을 사용해 학습 및 배치 사이즈 증가.  
 
-#### KorQuAD 1.0 
+### KorQuAD 1.0 
 - epoch: 5
 
 ![](./images/transformer-electra-korquad-result-82.png)
@@ -85,13 +84,13 @@ mixed precision을 사용해 학습 및 배치 사이즈 증가.
 |             KoBERT          |    51.75    |  79.15  |
 |**transformer-electra-small**|  **55.83**  |**82.02**|
 
-### 3. Ko-En Translation
+## 3. Ko-En Translation
 AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
 ![](./images/transformer-translation.png)
-#### Data
-##### ① AI Hub Ko-En Translation Sample Data.
+### Data
+#### ① AI Hub Ko-En Translation Sample Data.
 - data url: https://aihub.or.kr/sample_data_board
-##### ② AI Hub Ko-En Translation Spoken Data
+#### ② AI Hub Ko-En Translation Spoken Data
 구어체 번역 데이터 사용.  
   
 **csv format data**
@@ -100,7 +99,7 @@ AI Hub 번역 데이터를 이용한 한국어 -> 영어 번역 모델
 당신한테서 답장이 오면 난 하루가 행복해요.,I feel happy all day long if I get your reply.
 당신회사는 공장과 직접 일을 하나요?,Does your company work with the factory directly?
 ```
-#### Train Setting
+### Train Setting
 ```python
 # Model setting
 model_name = 'transformer-translation-spoken'
@@ -117,12 +116,12 @@ epochs = 50
 batch_size = 8
 learning_rate = 0.8
 ```
-#### Training 
+### Training 
 `train_translation.py`으로 번역 모델 학습.  
 ```sh
 python3 train_translation.py
 ```
-#### Train Result
+### Train Result
 - Epoch: 50
 
 ```
@@ -144,7 +143,7 @@ python3 train_translation.py
 -----------------------------------------------------------------------------------------
 ```
 
-#### Ko-En Translation Test
+### Ko-En Translation Test
 -  10000 데이터 대비, 220000 데이터에서 더 좋은 성능
 ```text
 ko: 나는 먹고 자기만 했어요. en: I just had a lot of things.
@@ -168,7 +167,7 @@ ko: 가정집을 개조한 분위기 좋은 레스토랑이 있습니다. en: Th
 ko: 가난뱅이인 제가 당신을 어떻게 사랑할 수 있습니까? en: How can I love you and love you?
 ```
 
-## References
+# References
 - http://nlp.seas.harvard.edu/2018/04/03/attention
 - https://tutorials.pytorch.kr/beginner/transformer_tutorial.html
 - https://github.com/lonePatient/electra_pytorch
