@@ -15,7 +15,7 @@ example
  ㄴ translation       ﹒﹒﹒ 번역 예제
 ```
 
-##1. Masked Language Model(ex. BERT)
+## 1. Masked Language Model(ex. BERT)
 BERT에서 사용한 MLM을 이용한 언어모델 Pretraining 
 ![](./images/masked_language_model.png)
 
