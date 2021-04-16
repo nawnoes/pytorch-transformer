@@ -15,7 +15,7 @@ example
  ㄴ translation       ﹒﹒﹒ 번역 예제
 ```
 
-## 1. Masked Language Model(ex. BERT)
+##1. Masked Language Model(ex. BERT)
 BERT에서 사용한 MLM을 이용한 언어모델 Pretraining 
 ![](./images/masked_language_model.png)
 
@@ -41,7 +41,7 @@ BERT에서 사용한 MLM을 이용한 언어모델 Pretraining
 
 |            model         | exact_match | f1 score|
 |:-------------------------|-------------|---------|
-|           KoBERT         |    51.75    |  79.15  |
+|         KoBERT(Base)     |    52.81    |  80.27  |
 |**transformer-bert-small**|  **56.47**  |**83.04**|
 
 
@@ -81,7 +81,8 @@ mixed precision을 사용해 학습 및 배치 사이즈 증가.
 
 |             model           | exact_match | f1 score|
 |:----------------------------|-------------|---------|
-|             KoBERT          |    51.75    |  79.15  |
+|           KoBERT(Base)      |    52.81    |  80.27  |
+|      KoELECTRA-Small-v3     |    82.11    |  91.13  |
 |**transformer-electra-small**|  **55.83**  |**82.02**|
 
 ## 3. Ko-En Translation
